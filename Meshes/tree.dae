@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <contributor>
+      <author>Blender User</author>
+      <authoring_tool>Blender 2.78.0 commit date:2016-10-24, commit time:12:20, hash:e8299c8</authoring_tool>
+    </contributor>
+    <created>2016-11-14T19:39:58</created>
+    <modified>2016-11-14T19:39:58</modified>
+    <unit name="meter" meter="1"/>
+    <up_axis>Z_UP</up_axis>
+  </asset>
+  <library_cameras>
+    <camera id="Camera-camera" name="Camera">
+      <optics>
+        <technique_common>
+          <perspective>
+            <xfov sid="xfov">49.13434</xfov>
+            <aspect_ratio>1.777778</aspect_ratio>
+            <znear sid="znear">0.1</znear>
+            <zfar sid="zfar">100</zfar>
+          </perspective>
+        </technique_common>
+      </optics>
+      <extra>
+        <technique profile="blender">
+          <YF_dofdist>0</YF_dofdist>
+          <shiftx>0</shiftx>
+          <shifty>0</shifty>
+        </technique>
+      </extra>
+    </camera>
+  </library_cameras>
+  <library_lights>
+    <light id="Lamp-light" name="Lamp">
+      <technique_common>
+        <point>
+          <color sid="color">1 1 1</color>
+          <constant_attenuation>1</constant_attenuation>
+          <linear_attenuation>0</linear_attenuation>
+          <quadratic_attenuation>0.00111109</quadratic_attenuation>
+        </point>
+      </technique_common>
+      <extra>
+        <technique profile="blender">
+          <adapt_thresh>0.000999987</adapt_thresh>
+          <area_shape>1</area_shape>
+          <area_size>0.1</area_size>
+          <area_sizey>0.1</area_sizey>
+          <area_sizez>1</area_sizez>
+          <atm_distance_factor>1</atm_distance_factor>
+          <atm_extinction_factor>1</atm_extinction_factor>
+          <atm_turbidity>2</atm_turbidity>
+          <att1>0</att1>
+          <att2>1</att2>
+          <backscattered_light>1</backscattered_light>
+          <bias>1</bias>
+          <blue>1</blue>
+          <buffers>1</buffers>
+          <bufflag>0</bufflag>
+          <bufsize>2880</bufsize>
+          <buftype>2</buftype>
+          <clipend>30.002</clipend>
+          <clipsta>1.000799</clipsta>
+          <compressthresh>0.04999995</compressthresh>
+          <dist sid="blender_dist">29.99998</dist>
+          <energy sid="blender_energy">1</energy>
+          <falloff_type>2</falloff_type>
+          <filtertype>0</filtertype>
+          <flag>0</flag>
+          <gamma sid="blender_gamma">1</gamma>
+          <green>1</green>
+          <halo_intensity sid="blnder_halo_intensity">1</halo_intensity>
+          <horizon_brightness>1</horizon_brightness>
+          <mode>8192</mode>
+          <ray_samp>1</ray_samp>
+          <ray_samp_method>1</ray_samp_method>
+          <ray_samp_type>0</ray_samp_type>
+          <ray_sampy>1</ray_sampy>
+          <ray_sampz>1</ray_sampz>
+          <red>1</red>
+          <samp>3</samp>
+          <shadhalostep>0</shadhalostep>
+          <shadow_b sid="blender_shadow_b">0</shadow_b>
+          <shadow_g sid="blender_shadow_g">0</shadow_g>
+          <shadow_r sid="blender_shadow_r">0</shadow_r>
+          <sky_colorspace>0</sky_colorspace>
+          <sky_exposure>1</sky_exposure>
+          <skyblendfac>1</skyblendfac>
+          <skyblendtype>1</skyblendtype>
+          <soft>3</soft>
+          <spotblend>0.15</spotblend>
+          <spotsize>75</spotsize>
+          <spread>1</spread>
+          <sun_brightness>1</sun_brightness>
+          <sun_effect_type>0</sun_effect_type>
+          <sun_intensity>1</sun_intensity>
+          <sun_size>1</sun_size>
+          <type>0</type>
+        </technique>
+      </extra>
+    </light>
+  </library_lights>
+  <library_images/>
+  <library_effects>
+    <effect id="Material_001-effect">
+      <profile_COMMON>
+        <technique sid="common">
+          <phong>
+            <emission>
+              <color sid="emission">0 0 0 1</color>
+            </emission>
+            <ambient>
+              <color sid="ambient">0 0 0 1</color>
+            </ambient>
+            <diffuse>
+              <color sid="diffuse">0.01073059 0.64 0.0586974 1</color>
+            </diffuse>
+            <specular>
+              <color sid="specular">0.2294274 0.5 0.2784656 1</color>
+            </specular>
+            <shininess>
+              <float sid="shininess">50</float>
+            </shininess>
+            <index_of_refraction>
+              <float sid="index_of_refraction">1</float>
+            </index_of_refraction>
+          </phong>
+        </technique>
+      </profile_COMMON>
+    </effect>
+    <effect id="Material_002-effect">
+      <profile_COMMON>
+        <technique sid="common">
+          <phong>
+            <emission>
+              <color sid="emission">0 0 0 1</color>
+            </emission>
+            <ambient>
+              <color sid="ambient">0 0 0 1</color>
+            </ambient>
+            <diffuse>
+              <color sid="diffuse">0.1386839 0.03603459 0.004030342 1</color>
+            </diffuse>
+            <specular>
+              <color sid="specular">0.5 0.3131805 0.220711 1</color>
+            </specular>
+            <shininess>
+              <float sid="shininess">50</float>
+            </shininess>
+            <index_of_refraction>
+              <float sid="index_of_refraction">1</float>
+            </index_of_refraction>
+          </phong>
+        </technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+  <library_materials>
+    <material id="Material_001-material" name="Material_001">
+      <instance_effect url="#Material_001-effect"/>
+    </material>
+    <material id="Material_002-material" name="Material_002">
+      <instance_effect url="#Material_002-effect"/>
+    </material>
+  </library_materials>
+  <library_geometries>
+    <geometry id="Icosphere-mesh" name="Icosphere">
+      <mesh>
+        <source id="Icosphere-mesh-positions">
+          <float_array id="Icosphere-mesh-positions-array" count="87">-0.2352406 0.7240074 -0.7007352 0.003617823 -0.8922906 0.5237929 -0.584116 0.796989 0.3610039 0.5215458 0.7240079 0.5237914 0.8497386 -0.2722898 0.523791 -0.1781656 0.1294441 1.060728 0.1781655 -0.1294442 -1.060728 -0.003617882 -0.8922905 -0.523793 0.8475015 -0.2791752 -0.5237901 -0.8502541 0 -0.6713509 0.527408 0.7197484 -0.5237912 1.043889 0 0.05358934 0.3225806 -0.9927978 0.05358964 -0.8898145 -0.520931 0.3567231 -1.043889 0 -0.05358952 0.3225806 0.9927978 0.05358964 0.3389016 -0.2462262 0.9576507 0.02489584 0.2107417 -2.356267 0.02489584 0.09414988 -0.7241615 0.1999489 0.1096748 -2.356267 0.09897744 0.05137884 -0.7241615 0.1999489 -0.09245908 -2.356267 0.09897744 -0.03416317 -0.7241615 0.02489584 -0.193526 -2.356267 0.02489584 -0.07693421 -0.7241615 -0.1501572 -0.09245908 -2.356267 -0.04918575 -0.03416317 -0.7241615 -0.1501572 0.1096748 -2.356267 -0.04918575 0.05137884 -0.7241615</float_array>
+          <technique_common>
+            <accessor source="#Icosphere-mesh-positions-array" count="29" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="Icosphere-mesh-normals">
+          <float_array id="Icosphere-mesh-normals-array" count="141">-0.3185022 0.2332651 -0.918773 -0.7363829 0.6139925 -0.2841715 0.8089845 -0.5877608 0.009029626 -0.3542868 -0.9343845 0.03750604 -0.2570562 0.9546706 -0.1500878 0.8089845 0.5877607 0.009031236 0.4741239 -0.6470395 0.5971152 -0.3510014 -0.4837671 0.8017278 -0.7690125 0.1763807 0.6144182 -0.05743247 0.7055016 0.7063773 0.639055 0.2105123 0.7397928 0.3980092 0.3110076 0.8630545 -0.1796397 -0.4824774 0.8572894 0.8239657 0.2714242 0.4974027 0.8090013 0.587773 -0.006328463 -0.01674908 0.8649693 0.5015452 -0.817037 0.1877452 0.5451627 -0.3742648 -0.9256278 -0.05602729 0.5127573 -0.6997628 0.4974054 0.8090013 -0.587773 -0.006330013 0.09722697 0.9126139 -0.3970931 -0.7795002 0.5767856 -0.2443317 -0.8473592 -0.4598239 -0.2656019 -0.6444063 -0.671831 -0.3652173 0.5286884 -0.7339169 -0.4264441 0.8613716 0.2760161 -0.4264436 0.2028505 0.4623553 -0.8631798 -0.3630931 -0.4768878 -0.8004634 0.6399426 0.2050612 -0.7405561 0.4227285 -0.5868235 -0.6906076 0.499046 0.8643729 0.06174767 0.9980919 -1.80328e-7 0.06174772 0.4990457 -0.864373 0.06174767 -0.4990459 -0.8643729 0.06174767 4.32408e-7 0 1 -0.9980919 0 0.06174767 -0.4990459 0.8643729 0.06174767 0 0 -1 0.4990457 0.864373 0.06174767 0.9980919 -2.13055e-7 0.06174767 0.499046 -0.8643728 0.06174767 -0.4990461 -0.8643727 0.06174767 0 0 1 -1.17571e-6 0 1 -0.9980919 0 0.06174767 -0.4990459 0.8643729 0.06174767 -8.4225e-7 0 -1</float_array>
+          <technique_common>
+            <accessor source="#Icosphere-mesh-normals-array" count="47" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="Icosphere-mesh-vertices">
+          <input semantic="POSITION" source="#Icosphere-mesh-positions"/>
+        </vertices>
+        <polylist material="Material_001-material" count="30">
+          <input semantic="VERTEX" source="#Icosphere-mesh-vertices" offset="0"/>
+          <input semantic="NORMAL" source="#Icosphere-mesh-normals" offset="1"/>
+          <vcount>3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 </vcount>
+          <p>6 0 9 0 0 0 0 1 9 1 2 1 8 2 11 2 12 2 7 3 12 3 13 3 0 4 2 4 15 4 10 5 15 5 11 5 1 6 4 6 16 6 13 7 1 7 5 7 2 8 13 8 5 8 3 9 2 9 5 9 4 10 3 10 16 10 16 11 3 11 5 11 5 12 1 12 16 12 11 13 3 13 4 13 11 14 15 14 3 14 15 15 2 15 3 15 14 16 13 16 2 16 13 17 12 17 1 17 12 18 4 18 1 18 12 19 11 19 4 19 10 20 0 20 15 20 2 21 9 21 14 21 14 22 9 22 13 22 9 23 7 23 13 23 7 24 8 24 12 24 8 25 10 25 11 25 6 26 0 26 10 26 6 27 7 27 9 27 8 28 6 28 10 28 6 29 8 29 7 29</p>
+        </polylist>
+        <polylist material="Material_002-material" count="20">
+          <input semantic="VERTEX" source="#Icosphere-mesh-vertices" offset="0"/>
+          <input semantic="NORMAL" source="#Icosphere-mesh-normals" offset="1"/>
+          <vcount>3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 </vcount>
+          <p>17 30 20 30 19 30 19 31 22 31 21 31 22 32 23 32 21 32 24 33 25 33 23 33 18 34 26 34 22 34 26 35 27 35 25 35 27 36 18 36 17 36 19 37 23 37 17 37 17 38 18 38 20 38 19 39 20 39 22 39 22 40 24 40 23 40 24 41 26 41 25 41 22 42 20 42 18 42 18 43 28 43 26 43 26 42 24 42 22 42 26 44 28 44 27 44 27 45 28 45 18 45 27 37 17 37 23 37 19 46 21 46 23 46 23 37 25 37 27 37</p>
+        </polylist>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_controllers/>
+  <library_visual_scenes>
+    <visual_scene id="Scene" name="Scene">
+      <node id="Camera" name="Camera" type="NODE">
+        <matrix sid="transform">0.6859207 -0.3240135 0.6515582 7.481132 0.7276763 0.3054208 -0.6141704 -6.50764 0 0.8953956 0.4452714 5.343665 0 0 0 1</matrix>
+        <instance_camera url="#Camera-camera"/>
+      </node>
+      <node id="Lamp" name="Lamp" type="NODE">
+        <matrix sid="transform">-0.2908646 -0.7711008 0.5663932 4.076245 0.9551712 -0.1998834 0.2183912 1.005454 -0.05518906 0.6045247 0.7946723 5.903862 0 0 0 1</matrix>
+        <instance_light url="#Lamp-light"/>
+      </node>
+      <node id="Icosphere" name="Icosphere" type="NODE">
+        <matrix sid="transform">1 0 0 0.05966644 0 1 0 -0.07985685 0 0 1 2.186572 0 0 0 1</matrix>
+        <instance_geometry url="#Icosphere-mesh" name="Icosphere">
+          <bind_material>
+            <technique_common>
+              <instance_material symbol="Material_001-material" target="#Material_001-material"/>
+              <instance_material symbol="Material_002-material" target="#Material_002-material"/>
+            </technique_common>
+          </bind_material>
+        </instance_geometry>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#Scene"/>
+  </scene>
+</COLLADA>

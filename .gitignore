@@ -1,0 +1,11 @@
+.vs/
+Debug/
+Release/
+assignment.VC.opendb
+assignment.sdf
+assignment.sln
+assignment/Debug/
+assignment/release/
+assignment/assignment.vcxproj
+assignment/assignment.vcxproj.filters
+
