@@ -458,7 +458,6 @@ void resetCamera() {
 
 // Placeholder code for the keypress
 void keypress(unsigned char key, int x, int y) {
-	//printf("X:%f Y:%f Z:%f\n", cameraPos.v[0], cameraPos.v[1], cameraPos.v[2]);
 
 	GLfloat cameraSpeed = speed;
 	switch (key)
