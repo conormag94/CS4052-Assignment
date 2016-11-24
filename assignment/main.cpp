@@ -28,9 +28,6 @@ MESH TO LOAD
 #define MESH_NAME "../Meshes/plane.obj"
 #define MESH_NAME_2 "../Meshes/tree.dae"
 
-GLfloat crosshair_vertices = {
-
-};
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
 char* mesh_names[3] = { "../Meshes/plane.obj", "../Meshes/tree.dae", "../Meshes/sniper.obj" };
@@ -283,10 +280,9 @@ void display() {
 	// tell GL to only draw onto a pixel if the shape is closer to the viewer
 	glEnable(GL_DEPTH_TEST); // enable depth-testing
 	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
-	glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glUseProgram(shaderProgramID);
-	
+	glClearColor(0.0f, 0.5, 0.8, 1.0f);
+	glUseProgram(shaderProgramID);	
 
 	//Declare your uniform variables that will be used in your shader
 	int matrix_location = glGetUniformLocation(shaderProgramID, "model");
@@ -365,6 +361,7 @@ void display() {
 	glBindVertexArray(g_vao[2]);
 	glDrawArrays(GL_TRIANGLES, 0, g_point_count[2]);
 
+
 	glBindVertexArray(0);
 
 	glutSwapBuffers();
@@ -442,8 +439,8 @@ void keypress(unsigned char key, int x, int y) {
 
 
 bool firstMouse = true;
-void mouse(int x, int y) {
 
+void mouse(int x, int y) {
 
 	if (firstMouse) {
 		lastX = x;
@@ -477,6 +474,7 @@ void mouse(int x, int y) {
 
 	vec3 newFront = normalise(vec3(front_x, front_y, front_z));
 	cameraFront = newFront;
+	
 
 }
 
@@ -493,7 +491,7 @@ int main(int argc, char** argv) {
 	glutIdleFunc(updateScene);
 	glutKeyboardFunc(keypress);
 	glutPassiveMotionFunc(mouse);
-	glutSetCursor(GLUT_CURSOR_NONE);
+	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
 	glutWarpPointer(width / 2, height / 2);
 
 
