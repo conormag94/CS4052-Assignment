@@ -273,7 +273,7 @@ mat3 zero_mat3() {
 		0.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 0.0f
-		);
+	);
 }
 
 mat3 identity_mat3() {
@@ -281,7 +281,7 @@ mat3 identity_mat3() {
 		1.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f,
 		0.0f, 0.0f, 1.0f
-		);
+	);
 }
 
 mat4 zero_mat4() {
@@ -290,7 +290,7 @@ mat4 zero_mat4() {
 		0.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 0.0f
-		);
+	);
 }
 
 mat4 identity_mat4() {
@@ -299,7 +299,7 @@ mat4 identity_mat4() {
 		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f
-		);
+	);
 }
 
 /* mat4 array layout
@@ -480,7 +480,7 @@ mat4 inverse(const mat4& mm) {
 			mm.m[8] * mm.m[1] * mm.m[6] - mm.m[0] * mm.m[9] * mm.m[6] -
 			mm.m[4] * mm.m[1] * mm.m[10] + mm.m[0] * mm.m[5] * mm.m[10]
 			)
-		);
+	);
 }
 
 // returns a 16-element array flipped on the main diagonal
@@ -490,7 +490,7 @@ mat4 transpose(const mat4& mm) {
 		mm.m[1], mm.m[5], mm.m[9], mm.m[13],
 		mm.m[2], mm.m[6], mm.m[10], mm.m[14],
 		mm.m[3], mm.m[7], mm.m[11], mm.m[15]
-		);
+	);
 }
 
 /*--------------------------AFFINE MATRIX FUNCTIONS---------------------------*/
@@ -677,7 +677,7 @@ mat4 quat_to_mat4(const versor& q) {
 		0.0f,
 		0.0f,
 		1.0f
-		);
+	);
 }
 
 versor normalise(versor& q) {

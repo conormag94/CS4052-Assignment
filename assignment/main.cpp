@@ -26,16 +26,21 @@ MESH TO LOAD
 // this mesh is a dae file format but you should be able to use any other format too, obj is typically what is used
 // put the mesh in your project directory, or provide a filepath for it here
 #define MESH_NAME "../Meshes/plane.obj"
-#define MESH_NAME_2 "../Meshes/tree_1.obj"
+#define MESH_NAME_2 "../Meshes/tree.dae"
+
+GLfloat crosshair_vertices = {
+
+};
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
+char* mesh_names[3] = { "../Meshes/plane.obj", "../Meshes/tree.dae", "../Meshes/sniper.obj" };
+std::vector<float> g_vp[3], g_vn[3], g_vt[3];
+int g_point_count[3] = { 0, 0, 0 };
 
-std::vector<float> g_vp, g_vn, g_vt;
 std::vector<float> c_vp, c_vn, c_vt;
-int g_point_count = 0;
 int c_point_count = 0;
 
-unsigned int g_vao = 1;
+unsigned int g_vao[3] = { 1, 2, 3};
 unsigned int c_vao = 2;
 
 GLuint loc1, loc2, loc3;
@@ -46,18 +51,15 @@ GLuint loc1, loc2, loc3;
 using namespace std;
 GLuint shaderProgramID;
 
-//float eyeX = 0.0f; float eyeY = 0.0f; float eyeZ = -5.0f;
-//float lookX = 0.0f; float lookY = 0.0f; float lookZ = 0.0f;
-//float upX = 0.0f; float upY = 1.0f; float upZ = 0.0f;
-
 GLuint width = 1200;
 GLuint height = 900;
 
 GLfloat rotate_y = 0.0f;
 
-GLfloat speed = 0.2;
+GLfloat speed = 0.1;
 
-vec3 cameraPos = vec3(0.0f, 5.0f, 15.0f);
+// Camera starting position
+vec3 cameraPos = vec3(2.0f, 1.0f, 7.0f);
 vec3 cameraFront = vec3(0.0f, 0.0f, -1.0f);
 vec3 cameraUp = vec3(0.0f, 1.0f, 0.0f);
 
@@ -72,7 +74,7 @@ GLfloat lastY = height / 2.0;
 MESH LOADING FUNCTION
 ----------------------------------------------------------------------------*/
 
-bool load_mesh(const char* file_name) {
+bool load_mesh(const char* file_name, int mesh_index) {
 	const aiScene* scene = aiImportFile(file_name, aiProcess_Triangulate); // TRIANGLES!
 	fprintf(stderr, "Loading mesh: %s\n", file_name);
 	if (!scene) {
@@ -86,60 +88,34 @@ bool load_mesh(const char* file_name) {
 	printf("  %i meshes\n", scene->mNumMeshes);
 	printf("  %i textures\n", scene->mNumTextures);
 
-	if (file_name == MESH_NAME)
-		g_point_count = 0;
-	if (file_name == MESH_NAME_2)
-		c_point_count = 0;
+	g_point_count[mesh_index] = 0;
 
 	for (unsigned int m_i = 0; m_i < scene->mNumMeshes; m_i++) {
 		const aiMesh* mesh = scene->mMeshes[m_i];
 		printf("    %i vertices in mesh\n", mesh->mNumVertices);
 
-		if (file_name == MESH_NAME)
-			g_point_count += mesh->mNumVertices;
-		if (file_name == MESH_NAME_2)
-			c_point_count += mesh->mNumVertices;
-
+		g_point_count[mesh_index] += mesh->mNumVertices;
 		for (unsigned int v_i = 0; v_i < mesh->mNumVertices; v_i++) {
 			if (mesh->HasPositions()) {
 				const aiVector3D* vp = &(mesh->mVertices[v_i]);
 				//printf ("      vp %i (%f,%f,%f)\n", v_i, vp->x, vp->y, vp->z);
-				if (file_name == MESH_NAME) {
-					g_vp.push_back(vp->x);
-					g_vp.push_back(vp->y);
-					g_vp.push_back(vp->z);
-				}
-				if (file_name == MESH_NAME_2) {
-					c_vp.push_back(vp->x);
-					c_vp.push_back(vp->y);
-					c_vp.push_back(vp->z);
-				}
+				g_vp[mesh_index].push_back(vp->x);
+				g_vp[mesh_index].push_back(vp->y);
+				g_vp[mesh_index].push_back(vp->z);
 			}
 			if (mesh->HasNormals()) {
 				const aiVector3D* vn = &(mesh->mNormals[v_i]);
 				//printf ("      vn %i (%f,%f,%f)\n", v_i, vn->x, vn->y, vn->z);
-				if (file_name == MESH_NAME) {
-					g_vn.push_back(vn->x);
-					g_vn.push_back(vn->y);
-					g_vn.push_back(vn->z);
-				}
-				if (file_name == MESH_NAME_2) {
-					c_vn.push_back(vn->x);
-					c_vn.push_back(vn->y);
-					c_vn.push_back(vn->z);
-				}
+				g_vn[mesh_index].push_back(vn->x);
+				g_vn[mesh_index].push_back(vn->y);
+				g_vn[mesh_index].push_back(vn->z);
+
 			}
 			if (mesh->HasTextureCoords(0)) {
 				const aiVector3D* vt = &(mesh->mTextureCoords[0][v_i]);
 				//printf ("      vt %i (%f,%f)\n", v_i, vt->x, vt->y);
-				if (file_name == MESH_NAME) {
-					g_vt.push_back(vt->x);
-					g_vt.push_back(vt->y);
-				}
-				if (file_name == MESH_NAME_2) {
-					c_vt.push_back(vt->x);
-					c_vt.push_back(vt->y);
-				}
+				g_vt[mesh_index].push_back(vt->x);
+				g_vt[mesh_index].push_back(vt->y);
 			}
 			if (mesh->HasTangentsAndBitangents()) {
 				// NB: could store/print tangents here
@@ -252,15 +228,15 @@ GLuint CompileShaders()
 //
 //https://www.opengl.org/discussion_boards/showthread.php/185119-Understanding-VAO-s-VBO-s-and-drawing-two-objects
 //
-void generateObjectBufferMesh() {
+void generateObjectBufferMesh(int mesh_index) {
 	/*----------------------------------------------------------------------------
 	LOAD MESH HERE AND COPY INTO BUFFERS
 	----------------------------------------------------------------------------*/
 
 	//Note: you may get an error "vector subscript out of range" if you are using this code for a mesh that doesnt have positions and normals
 	//Might be an idea to do a check for that before generating and binding the buffer.
-
-	load_mesh(MESH_NAME);
+	char* mesh_name = mesh_names[mesh_index];
+	load_mesh(mesh_name, mesh_index);
 	unsigned int g_vp_vbo = 0;
 	loc1 = glGetAttribLocation(shaderProgramID, "vertex_position");
 	loc2 = glGetAttribLocation(shaderProgramID, "vertex_normal");
@@ -268,11 +244,11 @@ void generateObjectBufferMesh() {
 
 	glGenBuffers(1, &g_vp_vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, g_vp_vbo);
-	glBufferData(GL_ARRAY_BUFFER, g_point_count * 3 * sizeof(float), &g_vp[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, g_point_count[mesh_index] * 3 * sizeof(float), &g_vp[mesh_index][0], GL_STATIC_DRAW);
 	unsigned int g_vn_vbo = 0;
 	glGenBuffers(1, &g_vn_vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, g_vn_vbo);
-	glBufferData(GL_ARRAY_BUFFER, g_point_count * 3 * sizeof(float), &g_vn[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, g_point_count[mesh_index] * 3 * sizeof(float), &g_vn[mesh_index][0], GL_STATIC_DRAW);
 
 	//	This is for texture coordinates which you don't currently need, so I have commented it out
 	//	unsigned int vt_vbo = 0;
@@ -280,9 +256,10 @@ void generateObjectBufferMesh() {
 	//	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
 	//	glBufferData (GL_ARRAY_BUFFER, g_point_count * 2 * sizeof (float), &g_vt[0], GL_STATIC_DRAW);
 
-	g_vao = 1;
-	glGenVertexArrays(1, &g_vao);
-	glBindVertexArray(g_vao);
+
+	g_vao[mesh_index] = mesh_index + 1;
+	glGenVertexArrays(1, &g_vao[mesh_index]);
+	glBindVertexArray(g_vao[mesh_index]);
 
 	glEnableVertexAttribArray(loc1);
 	glBindBuffer(GL_ARRAY_BUFFER, g_vp_vbo);
@@ -296,45 +273,6 @@ void generateObjectBufferMesh() {
 	//	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
 	//	glVertexAttribPointer (loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
-}
-
-//TODO: Make this less bad
-void generateConeBufferMesh() {
-	load_mesh(MESH_NAME_2);
-	unsigned int c_vp_vbo = 0;
-	loc1 = glGetAttribLocation(shaderProgramID, "vertex_position");
-	loc2 = glGetAttribLocation(shaderProgramID, "vertex_normal");
-	loc3 = glGetAttribLocation(shaderProgramID, "vertex_texture");
-
-	glGenBuffers(1, &c_vp_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, c_vp_vbo);
-	glBufferData(GL_ARRAY_BUFFER, c_point_count * 3 * sizeof(float), &c_vp[0], GL_STATIC_DRAW);
-	unsigned int c_vn_vbo = 0;
-	glGenBuffers(1, &c_vn_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, c_vn_vbo);
-	glBufferData(GL_ARRAY_BUFFER, c_point_count * 3 * sizeof(float), &c_vn[0], GL_STATIC_DRAW);
-
-	//	This is for texture coordinates which you don't currently need, so I have commented it out
-	//	unsigned int vt_vbo = 0;
-	//	glGenBuffers (1, &vt_vbo);
-	//	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
-	//	glBufferData (GL_ARRAY_BUFFER, g_point_count * 2 * sizeof (float), &g_vt[0], GL_STATIC_DRAW);
-
-	c_vao = 2;
-	glGenVertexArrays(1, &c_vao);
-	glBindVertexArray(c_vao);
-
-	glEnableVertexAttribArray(loc1);
-	glBindBuffer(GL_ARRAY_BUFFER, c_vp_vbo);
-	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-	glEnableVertexAttribArray(loc2);
-	glBindBuffer(GL_ARRAY_BUFFER, c_vn_vbo);
-	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	//	This is for texture coordinates which you don't currently need, so I have commented it out
-	//	glEnableVertexAttribArray (loc3);
-	//	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
-	//	glVertexAttribPointer (loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 }
 
 #pragma endregion VBO_FUNCTIONS
@@ -348,7 +286,7 @@ void display() {
 	glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram(shaderProgramID);
-
+	
 
 	//Declare your uniform variables that will be used in your shader
 	int matrix_location = glGetUniformLocation(shaderProgramID, "model");
@@ -358,7 +296,7 @@ void display() {
 
 	// Root of the Hierarchy
 	mat4 view = identity_mat4();
-	mat4 persp_proj = perspective(60.0, (float)width / (float)height, 0.1, 1000.0);
+	mat4 persp_proj = perspective(45.0, (float)width / (float)height, 0.1, 100.0);
 	mat4 model = identity_mat4();
 	view = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
 
@@ -368,8 +306,8 @@ void display() {
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, model.m);
 
 	// Bind the plane's VAO and draw
-	glBindVertexArray(g_vao);
-	glDrawArrays(GL_TRIANGLES, 0, g_point_count);
+	glBindVertexArray(g_vao[0]);
+	glDrawArrays(GL_TRIANGLES, 0, g_point_count[0]);
 
 	// Tree 1 ---------------------------------------
 	mat4 treeLocal = identity_mat4();
@@ -381,8 +319,8 @@ void display() {
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal.m);
 
 	// Bind the Child Object's VAO and draw
-	glBindVertexArray(c_vao);
-	glDrawArrays(GL_TRIANGLES, 0, c_point_count);
+	glBindVertexArray(g_vao[1]);
+	glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
 
 
 	// Tree 2 ---------------------------------------
@@ -395,8 +333,8 @@ void display() {
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal2.m);
 
 	// Bind the Child Object's VAO and draw
-	glBindVertexArray(c_vao);
-	glDrawArrays(GL_TRIANGLES, 0, c_point_count);
+	glBindVertexArray(g_vao[1]);
+	glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
 
 	// Tree 3 ---------------------------------------
 	mat4 treeLocal3 = identity_mat4();
@@ -408,8 +346,24 @@ void display() {
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal3.m);
 
 	// Bind the Child Object's VAO and draw
-	glBindVertexArray(c_vao);
-	glDrawArrays(GL_TRIANGLES, 0, c_point_count);
+	glBindVertexArray(g_vao[1]);
+	glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
+
+	// Gun
+	mat4 gunView = identity_mat4();
+	mat4 gunPersp_proj = perspective(45.0, (float)width / (float)height, 0.1, 100.0);
+	mat4 gunModel = identity_mat4();
+	gunModel = rotate_y_deg(gunModel, 180.0);
+	gunModel = translate(gunModel, vec3(0.05, -0.05, -0.15));
+	
+
+	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, gunPersp_proj.m);
+	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, gunView.m);
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, gunModel.m);
+
+
+	glBindVertexArray(g_vao[2]);
+	glDrawArrays(GL_TRIANGLES, 0, g_point_count[2]);
 
 	glBindVertexArray(0);
 
@@ -442,9 +396,11 @@ void init()
 	GLuint shaderProgramID = CompileShaders();
 
 	// load mesh into a vertex buffer array
-	generateObjectBufferMesh();
+	generateObjectBufferMesh(0);
+	generateObjectBufferMesh(1);
+	generateObjectBufferMesh(2);
 
-	generateConeBufferMesh();
+	//generateConeBufferMesh();
 
 	glBindVertexArray(0);
 	glEnable(GL_CULL_FACE);
@@ -487,7 +443,7 @@ void keypress(unsigned char key, int x, int y) {
 
 bool firstMouse = true;
 void mouse(int x, int y) {
-	
+
 
 	if (firstMouse) {
 		lastX = x;
@@ -495,15 +451,13 @@ void mouse(int x, int y) {
 		firstMouse = false;
 	}
 
-	
-
 	GLfloat xoffset = x - lastX;
 	GLfloat yoffset = lastY - y;
 
 	lastX = x;
 	lastY = y;
 
-	GLfloat mouseSensitivity = 0.5;
+	GLfloat mouseSensitivity = 0.3;
 	xoffset *= mouseSensitivity;
 	yoffset *= mouseSensitivity;
 
