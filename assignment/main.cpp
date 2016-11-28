@@ -30,17 +30,20 @@ MESH TO LOAD
 
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
-char* mesh_names[3] = { "../Meshes/plane.obj", "../Meshes/tree.dae", "../Meshes/sniper.obj" };
+char* mesh_names[3] = { "../Meshes/plane.obj", "../Meshes/cube.obj", "../Meshes/pistol_1.obj" };
 std::vector<float> g_vp[3], g_vn[3], g_vt[3];
 int g_point_count[3] = { 0, 0, 0 };
 
 std::vector<float> c_vp, c_vn, c_vt;
 int c_point_count = 0;
 
-unsigned int g_vao[3] = { 1, 2, 3};
+unsigned int g_vao[3] = { 1, 2, 3 };
 unsigned int c_vao = 2;
 
 GLuint loc1, loc2, loc3;
+
+GLfloat fogColour[4] = { 1, 0, 0, 1 };
+GLfloat density = 0.5;
 
 // Macro for indexing vertex buffer
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
@@ -248,10 +251,10 @@ void generateObjectBufferMesh(int mesh_index) {
 	glBufferData(GL_ARRAY_BUFFER, g_point_count[mesh_index] * 3 * sizeof(float), &g_vn[mesh_index][0], GL_STATIC_DRAW);
 
 	//	This is for texture coordinates which you don't currently need, so I have commented it out
-	//	unsigned int vt_vbo = 0;
-	//	glGenBuffers (1, &vt_vbo);
-	//	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
-	//	glBufferData (GL_ARRAY_BUFFER, g_point_count * 2 * sizeof (float), &g_vt[0], GL_STATIC_DRAW);
+	unsigned int vt_vbo = 0;
+	glGenBuffers (1, &vt_vbo);
+	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
+	glBufferData (GL_ARRAY_BUFFER, g_point_count[mesh_index] * 2 * sizeof (float), &g_vt[mesh_index][0], GL_STATIC_DRAW);
 
 
 	g_vao[mesh_index] = mesh_index + 1;
@@ -266,9 +269,9 @@ void generateObjectBufferMesh(int mesh_index) {
 	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
 	//	This is for texture coordinates which you don't currently need, so I have commented it out
-	//	glEnableVertexAttribArray (loc3);
-	//	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
-	//	glVertexAttribPointer (loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+	glEnableVertexAttribArray (loc3);
+	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
+	glVertexAttribPointer (loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
 }
 
@@ -280,9 +283,10 @@ void display() {
 	// tell GL to only draw onto a pixel if the shape is closer to the viewer
 	glEnable(GL_DEPTH_TEST); // enable depth-testing
 	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearColor(0.0f, 0.5, 0.8, 1.0f);
-	glUseProgram(shaderProgramID);	
+	glUseProgram(shaderProgramID);
 
 	//Declare your uniform variables that will be used in your shader
 	int matrix_location = glGetUniformLocation(shaderProgramID, "model");
@@ -389,6 +393,13 @@ void updateScene() {
 
 void init()
 {
+	glFogi(GL_FOG_MODE, GL_LINEAR);
+	glFogfv(GL_FOG_COLOR, fogColour);
+	glFogf(GL_FOG_DENSITY, density);
+	glHint(GL_FOG_HINT, GL_NICEST);
+	glFogf(GL_FOG_START, 1.0f);
+	glFogf(GL_FOG_END, 100.0f);
+	glEnable(GL_FOG);
 	// Set up the shaders
 	GLuint shaderProgramID = CompileShaders();
 
@@ -396,8 +407,6 @@ void init()
 	generateObjectBufferMesh(0);
 	generateObjectBufferMesh(1);
 	generateObjectBufferMesh(2);
-
-	//generateConeBufferMesh();
 
 	glBindVertexArray(0);
 	glEnable(GL_CULL_FACE);
@@ -491,7 +500,7 @@ int main(int argc, char** argv) {
 	glutIdleFunc(updateScene);
 	glutKeyboardFunc(keypress);
 	glutPassiveMotionFunc(mouse);
-	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
+	glutSetCursor(GLUT_CURSOR_NONE);
 	glutWarpPointer(width / 2, height / 2);
 
 
