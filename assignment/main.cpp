@@ -18,6 +18,8 @@
 #include <vector> // STL dynamic memory.
 
 #include "../SOIL.h"
+#include "../text.h"
+#include "../text.cpp"
 
 
 /*----------------------------------------------------------------------------
@@ -288,6 +290,7 @@ void display() {
 	glClearColor(0.0f, 0.5, 0.8, 1.0f);
 	glUseProgram(shaderProgramID);
 
+
 	//Declare your uniform variables that will be used in your shader
 	int matrix_location = glGetUniformLocation(shaderProgramID, "model");
 	int view_mat_location = glGetUniformLocation(shaderProgramID, "view");
@@ -368,6 +371,8 @@ void display() {
 
 	glBindVertexArray(0);
 
+	draw_texts ();
+
 	glutSwapBuffers();
 }
 
@@ -402,6 +407,13 @@ void init()
 	glEnable(GL_FOG);
 	// Set up the shaders
 	GLuint shaderProgramID = CompileShaders();
+
+	init_text_rendering("../freemono.png", "../freemono.meta", width, height);
+	// x and y are -1 to 1
+	// size_px is the maximum glyph size in pixels (try 100.0f)
+	// r,g,b,a are red,blue,green,opacity values between 0.0 and 1.0
+	// if you want to change the text later you will use the returned integer as a parameter
+	int hello_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	// load mesh into a vertex buffer array
 	generateObjectBufferMesh(0);
@@ -450,7 +462,7 @@ void keypress(unsigned char key, int x, int y) {
 bool firstMouse = true;
 
 void mouse(int x, int y) {
-
+	
 	if (firstMouse) {
 		lastX = x;
 		lastY = y;
@@ -483,7 +495,6 @@ void mouse(int x, int y) {
 
 	vec3 newFront = normalise(vec3(front_x, front_y, front_z));
 	cameraFront = newFront;
-	
 
 }
 
