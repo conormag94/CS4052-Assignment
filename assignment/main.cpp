@@ -32,15 +32,11 @@ MESH TO LOAD
 
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
-char* mesh_names[3] = { "../Meshes/plane.obj", "../Meshes/cube.obj", "../Meshes/pistol_1.obj" };
+char* mesh_names[3] = { "../Meshes/plane.obj", "../Meshes/cube.obj", "../Meshes/sniper.obj" };
 std::vector<float> g_vp[3], g_vn[3], g_vt[3];
 int g_point_count[3] = { 0, 0, 0 };
 
-std::vector<float> c_vp, c_vn, c_vt;
-int c_point_count = 0;
-
 unsigned int g_vao[3] = { 1, 2, 3 };
-unsigned int c_vao = 2;
 
 GLuint loc1, loc2, loc3;
 
