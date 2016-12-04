@@ -18,8 +18,7 @@
 #include <vector> // STL dynamic memory.
 
 #include "../SOIL.h"
-#include "../text.h"
-#include "../text.cpp"
+
 
 
 /*----------------------------------------------------------------------------
@@ -32,13 +31,20 @@ MESH TO LOAD
 
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
-char* mesh_names[3] = { "../Meshes/plane.obj", "../Meshes/cube.obj", "../Meshes/sniper.obj" };
+char* mesh_names[3] = { "../Meshes/plane_2.obj", "../Meshes/cube.obj", "../Meshes/sniper.obj" };
 std::vector<float> g_vp[3], g_vn[3], g_vt[3];
 int g_point_count[3] = { 0, 0, 0 };
 
 unsigned int g_vao[3] = { 1, 2, 3 };
 
 GLuint loc1, loc2, loc3;
+
+bool warped;
+
+// Tex
+int tWidth, tHeight;
+unsigned char* image;
+GLuint texture1, texture2;
 
 GLfloat fogColour[4] = { 1, 0, 0, 1 };
 GLfloat density = 0.5;
@@ -54,7 +60,7 @@ GLuint height = 900;
 
 GLfloat rotate_y = 0.0f;
 
-GLfloat speed = 0.1;
+GLfloat speed = 0.15;
 
 // Camera starting position
 vec3 cameraPos = vec3(2.0f, 1.0f, 7.0f);
@@ -266,7 +272,7 @@ void generateObjectBufferMesh(int mesh_index) {
 	glBindBuffer(GL_ARRAY_BUFFER, g_vn_vbo);
 	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-	//	This is for texture coordinates which you don't currently need, so I have commented it out
+	////	This is for texture coordinates which you don't currently need, so I have commented it out
 	glEnableVertexAttribArray (loc3);
 	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
 	glVertexAttribPointer (loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
@@ -286,7 +292,6 @@ void display() {
 	glClearColor(0.0f, 0.5, 0.8, 1.0f);
 	glUseProgram(shaderProgramID);
 
-
 	//Declare your uniform variables that will be used in your shader
 	int matrix_location = glGetUniformLocation(shaderProgramID, "model");
 	int view_mat_location = glGetUniformLocation(shaderProgramID, "view");
@@ -299,6 +304,10 @@ void display() {
 	mat4 model = identity_mat4();
 	view = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
 
+	//glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture1);
+	glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
+
 	// update uniforms & draw
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, persp_proj.m);
 	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view.m);
@@ -308,10 +317,12 @@ void display() {
 	glBindVertexArray(g_vao[0]);
 	glDrawArrays(GL_TRIANGLES, 0, g_point_count[0]);
 
-	// Tree 1 ---------------------------------------
+	//// Tree 1 ---------------------------------------
+	glBindTexture(GL_TEXTURE_2D, texture2);
+	glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
+	
 	mat4 treeLocal = identity_mat4();
-	treeLocal = rotate_x_deg(treeLocal, -90.0);
-	treeLocal = translate(treeLocal, vec3(8.0, 2.5, 2.0));
+	treeLocal = translate(treeLocal, vec3(0.0, 1.0, 2.0));
 	treeLocal = scale(treeLocal, vec3(0.5, 0.5, 0.5));
 
 	mat4 treeGlobal = treeLocal * model;
@@ -322,52 +333,52 @@ void display() {
 	glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
 
 
-	// Tree 2 ---------------------------------------
-	mat4 treeLocal2 = identity_mat4();
-	treeLocal2 = rotate_x_deg(treeLocal2, -90.0);
-	treeLocal2 = translate(treeLocal2, vec3(12.0, 2.5, 2.0));
-	treeLocal2 = scale(treeLocal2, vec3(0.5, 0.5, 0.5));
+	//// Tree 2 ---------------------------------------
+	//mat4 treeLocal2 = identity_mat4();
+	//treeLocal2 = rotate_x_deg(treeLocal2, -90.0);
+	//treeLocal2 = translate(treeLocal2, vec3(12.0, 2.5, 2.0));
+	//treeLocal2 = scale(treeLocal2, vec3(0.5, 0.5, 0.5));
 
-	mat4 treeGlobal2 = treeLocal2 * model;
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal2.m);
+	//mat4 treeGlobal2 = treeLocal2 * model;
+	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal2.m);
 
-	// Bind the Child Object's VAO and draw
-	glBindVertexArray(g_vao[1]);
-	glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
+	//// Bind the Child Object's VAO and draw
+	//glBindVertexArray(g_vao[1]);
+	//glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
 
-	// Tree 3 ---------------------------------------
-	mat4 treeLocal3 = identity_mat4();
-	treeLocal3 = rotate_x_deg(treeLocal3, -90.0);
-	treeLocal3 = translate(treeLocal3, vec3(10.0, 2.5, 4.0));
-	treeLocal3 = scale(treeLocal3, vec3(0.5, 0.5, 0.5));
+	//// Tree 3 ---------------------------------------
+	//mat4 treeLocal3 = identity_mat4();
+	//treeLocal3 = rotate_x_deg(treeLocal3, -90.0);
+	//treeLocal3 = translate(treeLocal3, vec3(10.0, 2.5, 4.0));
+	//treeLocal3 = scale(treeLocal3, vec3(0.5, 0.5, 0.5));
 
-	mat4 treeGlobal3 = treeLocal3 * model;
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal3.m);
+	//mat4 treeGlobal3 = treeLocal3 * model;
+	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal3.m);
 
-	// Bind the Child Object's VAO and draw
-	glBindVertexArray(g_vao[1]);
-	glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
+	//// Bind the Child Object's VAO and draw
+	//glBindVertexArray(g_vao[1]);
+	//glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
 
-	// Gun
-	mat4 gunView = identity_mat4();
-	mat4 gunPersp_proj = perspective(45.0, (float)width / (float)height, 0.1, 100.0);
-	mat4 gunModel = identity_mat4();
-	gunModel = rotate_y_deg(gunModel, 180.0);
-	gunModel = translate(gunModel, vec3(0.05, -0.05, -0.15));
-	
+	//// Gun
+	//mat4 gunView = identity_mat4();
+	//mat4 gunPersp_proj = perspective(45.0, (float)width / (float)height, 0.1, 100.0);
+	//mat4 gunModel = identity_mat4();
+	//gunModel = rotate_y_deg(gunModel, 180.0);
+	//gunModel = translate(gunModel, vec3(0.05, -0.05, -0.15));
+	//
 
-	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, gunPersp_proj.m);
-	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, gunView.m);
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, gunModel.m);
+	//glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, gunPersp_proj.m);
+	//glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, gunView.m);
+	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, gunModel.m);
 
 
-	glBindVertexArray(g_vao[2]);
-	glDrawArrays(GL_TRIANGLES, 0, g_point_count[2]);
+	//glBindVertexArray(g_vao[2]);
+	//glDrawArrays(GL_TRIANGLES, 0, g_point_count[2]);
 
 
 	glBindVertexArray(0);
 
-	draw_texts ();
+	//draw_texts ();
 
 	glutSwapBuffers();
 }
@@ -401,15 +412,47 @@ void init()
 	glFogf(GL_FOG_START, 1.0f);
 	glFogf(GL_FOG_END, 100.0f);
 	glEnable(GL_FOG);
+
+	warped = false;
 	// Set up the shaders
 	GLuint shaderProgramID = CompileShaders();
 
-	init_text_rendering("../freemono.png", "../freemono.meta", width, height);
+	//init_text_rendering("../freemono.png", "../freemono.meta", width, height);
 	// x and y are -1 to 1
 	// size_px is the maximum glyph size in pixels (try 100.0f)
 	// r,g,b,a are red,blue,green,opacity values between 0.0 and 1.0
 	// if you want to change the text later you will use the returned integer as a parameter
-	int hello_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	//int hello_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+
+	glGenTextures(1, &texture1);
+	glBindTexture(GL_TEXTURE_2D, texture1); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object
+											// Set our texture parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// Set texture wrapping to GL_REPEAT
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// Set texture filtering
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	image = SOIL_load_image("../Textures/grass.jpg", &tWidth, &tHeight, 0, SOIL_LOAD_RGBA);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tWidth, tHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	SOIL_free_image_data(image);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glGenTextures(1, &texture2);
+	glBindTexture(GL_TEXTURE_2D, texture2); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object
+											// Set our texture parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// Set texture wrapping to GL_REPEAT
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// Set texture filtering
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	image = SOIL_load_image("../Textures/wall.jpg", &tWidth, &tHeight, 0, SOIL_LOAD_RGBA);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tWidth, tHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	SOIL_free_image_data(image);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// load mesh into a vertex buffer array
 	generateObjectBufferMesh(0);
