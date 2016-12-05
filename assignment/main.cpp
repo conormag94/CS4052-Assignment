@@ -31,7 +31,7 @@ MESH TO LOAD
 
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
-char* mesh_names[3] = { "../Meshes/plane_2.obj", "../Meshes/cube.obj", "../Meshes/sniper.obj" };
+char* mesh_names[3] = { "../Meshes/plane_2.obj", "../Meshes/tower.obj", "../Meshes/windmill.obj" };
 std::vector<float> g_vp[3], g_vn[3], g_vt[3];
 int g_point_count[3] = { 0, 0, 0 };
 
@@ -289,7 +289,7 @@ void display() {
 	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClearColor(0.0f, 0.5, 0.8, 1.0f);
+	glClearColor(0.0f, 0.7, 0.8, 1.0f);
 	glUseProgram(shaderProgramID);
 
 	//Declare your uniform variables that will be used in your shader
@@ -322,6 +322,7 @@ void display() {
 	glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
 	
 	mat4 treeLocal = identity_mat4();
+	//treeLocal = rotate_y_deg(treeLocal, -90.0);
 	treeLocal = translate(treeLocal, vec3(0.0, 1.0, 2.0));
 	treeLocal = scale(treeLocal, vec3(0.5, 0.5, 0.5));
 
@@ -332,19 +333,23 @@ void display() {
 	glBindVertexArray(g_vao[1]);
 	glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
 
+	// Tree 2 ---------------------------------------
+	mat4 treeLocal2 = identity_mat4();
+	
+	//treeLocal2 = scale(treeLocal2, vec3(2, 2, 2));
+	
+	
+	//treeLocal2 = rotate_y_deg(treeGlobal, 45.0);
+	treeLocal2 = translate(treeLocal, vec3(0.5, 1.5, -0.5));
+	//treeLocal2 = rotate_x_deg(treeGlobal, rotate_y);
+	
 
-	//// Tree 2 ---------------------------------------
-	//mat4 treeLocal2 = identity_mat4();
-	//treeLocal2 = rotate_x_deg(treeLocal2, -90.0);
-	//treeLocal2 = translate(treeLocal2, vec3(12.0, 2.5, 2.0));
-	//treeLocal2 = scale(treeLocal2, vec3(0.5, 0.5, 0.5));
+	mat4 treeGlobal2 = treeLocal2 * treeGlobal;
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal2.m);
 
-	//mat4 treeGlobal2 = treeLocal2 * model;
-	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal2.m);
-
-	//// Bind the Child Object's VAO and draw
-	//glBindVertexArray(g_vao[1]);
-	//glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
+	// Bind the Child Object's VAO and draw
+	glBindVertexArray(g_vao[2]);
+	glDrawArrays(GL_TRIANGLES, 0, g_point_count[2]);
 
 	//// Tree 3 ---------------------------------------
 	//mat4 treeLocal3 = identity_mat4();
@@ -396,7 +401,7 @@ void updateScene() {
 	last_time = curr_time;
 
 	// rotate the model slowly around the y axis
-	rotate_y += 0.02f;
+	rotate_y += 0.05f;
 
 	// Draw the next frame
 	glutPostRedisplay();
@@ -433,7 +438,7 @@ void init()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	image = SOIL_load_image("../Textures/grass.jpg", &tWidth, &tHeight, 0, SOIL_LOAD_RGBA);
+	image = SOIL_load_image("../Textures/green.png", &tWidth, &tHeight, 0, SOIL_LOAD_RGBA);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tWidth, tHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	SOIL_free_image_data(image);
@@ -448,7 +453,7 @@ void init()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	image = SOIL_load_image("../Textures/wall.jpg", &tWidth, &tHeight, 0, SOIL_LOAD_RGBA);
+	image = SOIL_load_image("../Textures/palette.png", &tWidth, &tHeight, 0, SOIL_LOAD_RGBA);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tWidth, tHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	SOIL_free_image_data(image);
@@ -464,7 +469,7 @@ void init()
 }
 
 void resetCamera() {
-	cameraPos = vec3(0.0f, 5.0f, 10.0f);
+	cameraPos = vec3(10.0f, 1.5f, 2.0f);
 	cameraFront = vec3(0.0f, 0.0f, -1.0f);
 	cameraUp = vec3(0.0f, 1.0f, 0.0f);
 }
@@ -494,6 +499,8 @@ void keypress(unsigned char key, int x, int y) {
 		exit(0);
 		break;
 	}
+	// Keeps user at ground level
+	cameraPos.v[1] = 1.5f;
 
 }
 
