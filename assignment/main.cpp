@@ -18,6 +18,7 @@
 #include <vector> // STL dynamic memory.
 
 #include "../SOIL.h"
+#include "text.h"
 
 
 
@@ -317,39 +318,62 @@ void display() {
 	glBindVertexArray(g_vao[0]);
 	glDrawArrays(GL_TRIANGLES, 0, g_point_count[0]);
 
-	//// Tree 1 ---------------------------------------
+
+	// ************TOWER*********************
 	glBindTexture(GL_TEXTURE_2D, texture2);
 	glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
+
+	/*mat4 towerLocal = identity_mat4();
 	
-	mat4 treeLocal = identity_mat4();
-	//treeLocal = rotate_y_deg(treeLocal, -90.0);
-	treeLocal = translate(treeLocal, vec3(0.0, 1.0, 2.0));
-	treeLocal = scale(treeLocal, vec3(0.5, 0.5, 0.5));
+	mat4 towerGlobal = model * towerLocal;
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, towerGlobal.m);
 
-	mat4 treeGlobal = treeLocal * model;
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal.m);
-
-	// Bind the Child Object's VAO and draw
 	glBindVertexArray(g_vao[1]);
-	glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
+	glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);*/
 
-	// Tree 2 ---------------------------------------
-	mat4 treeLocal2 = identity_mat4();
-	
-	//treeLocal2 = scale(treeLocal2, vec3(2, 2, 2));
-	
-	
-	//treeLocal2 = rotate_y_deg(treeGlobal, 45.0);
-	treeLocal2 = translate(treeLocal, vec3(0.5, 1.5, -0.5));
-	//treeLocal2 = rotate_x_deg(treeGlobal, rotate_y);
-	
+	// *************WINDMILL*************************
+	mat4 windmillLocal = identity_mat4();
+	windmillLocal = rotate_x_deg(windmillLocal, rotate_y);
 
-	mat4 treeGlobal2 = treeLocal2 * treeGlobal;
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal2.m);
+	mat4 windmillGlobal = windmillLocal;// towerGlobal * windmillLocal;
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, windmillGlobal.m);
 
-	// Bind the Child Object's VAO and draw
 	glBindVertexArray(g_vao[2]);
 	glDrawArrays(GL_TRIANGLES, 0, g_point_count[2]);
+
+	////// Tower  ---------------------------------------
+	//glBindTexture(GL_TEXTURE_2D, texture2);
+	//glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
+	//
+	//mat4 treeLocal = identity_mat4();
+	////treeLocal = rotate_y_deg(treeLocal, -90.0);
+	////treeLocal = translate(treeLocal, vec3(0.0, 1.0, 2.0));
+	////treeLocal = scale(treeLocal, vec3(0.5, 0.5, 0.5));
+
+	//mat4 treeGlobal = treeLocal * model;
+	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal.m);
+
+	//// Bind the Child Object's VAO and draw
+	//glBindVertexArray(g_vao[1]);
+	////glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
+
+	//// Windmill ---------------------------------------
+	//glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
+	//mat4 treeLocal2 = identity_mat4();
+	////treeLocal2 = translate(treeLocal2, vec3(0.0, -1.0, -2.0));
+	//treeGlobal = rotate_x_deg(treeGlobal, rotate_y);
+	////treeLocal2 = translate(treeLocal2, vec3(0.0, 1.0, 2.0));
+	////treeLocal2 = scale(treeLocal2, vec3(2, 2, 2));
+	//
+	////treeLocal2 = rotate_y_deg(treeLocal2, 15.0);
+	////treeLocal2 = translate(treeLocal2, vec3(0.5, 1.5, -0.5));
+
+	//mat4 treeGlobal2 = treeLocal2 * treeGlobal;
+	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal2.m);
+
+	//// Bind the Child Object's VAO and draw
+	//glBindVertexArray(g_vao[2]);
+	//glDrawArrays(GL_TRIANGLES, 0, g_point_count[2]);
 
 	//// Tree 3 ---------------------------------------
 	//mat4 treeLocal3 = identity_mat4();
@@ -383,7 +407,7 @@ void display() {
 
 	glBindVertexArray(0);
 
-	//draw_texts ();
+	draw_texts ();
 
 	glutSwapBuffers();
 }
@@ -422,12 +446,12 @@ void init()
 	// Set up the shaders
 	GLuint shaderProgramID = CompileShaders();
 
-	//init_text_rendering("../freemono.png", "../freemono.meta", width, height);
+	init_text_rendering("../freemono.png", "../freemono.meta", width, height);
 	// x and y are -1 to 1
 	// size_px is the maximum glyph size in pixels (try 100.0f)
 	// r,g,b,a are red,blue,green,opacity values between 0.0 and 1.0
 	// if you want to change the text later you will use the returned integer as a parameter
-	//int hello_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	int hello_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	glGenTextures(1, &texture1);
 	glBindTexture(GL_TEXTURE_2D, texture1); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object
