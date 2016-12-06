@@ -32,11 +32,11 @@ MESH TO LOAD
 
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
-char* mesh_names[3] = { "../Meshes/plane_2.obj", "../Meshes/tower.obj", "../Meshes/windmill.obj" };
-std::vector<float> g_vp[3], g_vn[3], g_vt[3];
-int g_point_count[3] = { 0, 0, 0 };
+char* mesh_names[4] = { "../Meshes/plane_2.obj", "../Meshes/tower.obj", "../Meshes/windmill2.obj", "../Meshes/enemy.obj" };
+std::vector<float> g_vp[4], g_vn[4], g_vt[4];
+int g_point_count[4] = { 0, 0, 0, 0 };
 
-unsigned int g_vao[3] = { 1, 2, 3 };
+unsigned int g_vao[4] = { 1, 2, 3, 4};
 
 GLuint loc1, loc2, loc3;
 
@@ -56,12 +56,16 @@ GLfloat density = 0.5;
 using namespace std;
 GLuint shaderProgramID;
 
-GLuint width = 1200;
-GLuint height = 900;
+GLuint width = 1920;
+GLuint height = 1080;
 
 GLfloat rotate_y = 0.0f;
+vec3 enemyPos = vec3(5.0, 0.0, 0.0);
 
 GLfloat speed = 0.15;
+int score = 0;
+
+int hello_id, score_id;
 
 // Camera starting position
 vec3 cameraPos = vec3(2.0f, 1.0f, 7.0f);
@@ -307,7 +311,7 @@ void display() {
 
 	//glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture1);
-	glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
+	//glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
 
 	// update uniforms & draw
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, persp_proj.m);
@@ -323,70 +327,34 @@ void display() {
 	glBindTexture(GL_TEXTURE_2D, texture2);
 	glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
 
-	/*mat4 towerLocal = identity_mat4();
+	mat4 towerLocal = identity_mat4();
 	
 	mat4 towerGlobal = model * towerLocal;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, towerGlobal.m);
 
 	glBindVertexArray(g_vao[1]);
-	glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);*/
+	glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
 
 	// *************WINDMILL*************************
 	mat4 windmillLocal = identity_mat4();
 	windmillLocal = rotate_x_deg(windmillLocal, rotate_y);
+	windmillLocal = translate(windmillLocal, vec3(2.0, 7.0, 0.0));
 
-	mat4 windmillGlobal = windmillLocal;// towerGlobal * windmillLocal;
+	mat4 windmillGlobal = towerGlobal * windmillLocal;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, windmillGlobal.m);
 
 	glBindVertexArray(g_vao[2]);
 	glDrawArrays(GL_TRIANGLES, 0, g_point_count[2]);
 
-	////// Tower  ---------------------------------------
-	//glBindTexture(GL_TEXTURE_2D, texture2);
-	//glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
-	//
-	//mat4 treeLocal = identity_mat4();
-	////treeLocal = rotate_y_deg(treeLocal, -90.0);
-	////treeLocal = translate(treeLocal, vec3(0.0, 1.0, 2.0));
-	////treeLocal = scale(treeLocal, vec3(0.5, 0.5, 0.5));
+	// *************ENEMY***************************
+	mat4 enemyLocal = identity_mat4();
+	enemyLocal = translate(enemyLocal, enemyPos);
+	
+	mat4 enemyGlobal = model * enemyLocal;
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, enemyGlobal.m);
 
-	//mat4 treeGlobal = treeLocal * model;
-	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal.m);
-
-	//// Bind the Child Object's VAO and draw
-	//glBindVertexArray(g_vao[1]);
-	////glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
-
-	//// Windmill ---------------------------------------
-	//glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
-	//mat4 treeLocal2 = identity_mat4();
-	////treeLocal2 = translate(treeLocal2, vec3(0.0, -1.0, -2.0));
-	//treeGlobal = rotate_x_deg(treeGlobal, rotate_y);
-	////treeLocal2 = translate(treeLocal2, vec3(0.0, 1.0, 2.0));
-	////treeLocal2 = scale(treeLocal2, vec3(2, 2, 2));
-	//
-	////treeLocal2 = rotate_y_deg(treeLocal2, 15.0);
-	////treeLocal2 = translate(treeLocal2, vec3(0.5, 1.5, -0.5));
-
-	//mat4 treeGlobal2 = treeLocal2 * treeGlobal;
-	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal2.m);
-
-	//// Bind the Child Object's VAO and draw
-	//glBindVertexArray(g_vao[2]);
-	//glDrawArrays(GL_TRIANGLES, 0, g_point_count[2]);
-
-	//// Tree 3 ---------------------------------------
-	//mat4 treeLocal3 = identity_mat4();
-	//treeLocal3 = rotate_x_deg(treeLocal3, -90.0);
-	//treeLocal3 = translate(treeLocal3, vec3(10.0, 2.5, 4.0));
-	//treeLocal3 = scale(treeLocal3, vec3(0.5, 0.5, 0.5));
-
-	//mat4 treeGlobal3 = treeLocal3 * model;
-	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, treeGlobal3.m);
-
-	//// Bind the Child Object's VAO and draw
-	//glBindVertexArray(g_vao[1]);
-	//glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
+	glBindVertexArray(g_vao[3]);
+	glDrawArrays(GL_TRIANGLES, 0, g_point_count[3]);
 
 	//// Gun
 	//mat4 gunView = identity_mat4();
@@ -406,6 +374,7 @@ void display() {
 
 
 	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	draw_texts ();
 
@@ -426,6 +395,7 @@ void updateScene() {
 
 	// rotate the model slowly around the y axis
 	rotate_y += 0.05f;
+	enemyPos.v[0] += 0.02f;
 
 	// Draw the next frame
 	glutPostRedisplay();
@@ -451,7 +421,8 @@ void init()
 	// size_px is the maximum glyph size in pixels (try 100.0f)
 	// r,g,b,a are red,blue,green,opacity values between 0.0 and 1.0
 	// if you want to change the text later you will use the returned integer as a parameter
-	int hello_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	hello_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	score_id = add_text("Score: ", -0.95f, -0.9f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	glGenTextures(1, &texture1);
 	glBindTexture(GL_TEXTURE_2D, texture1); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object
@@ -487,6 +458,7 @@ void init()
 	generateObjectBufferMesh(0);
 	generateObjectBufferMesh(1);
 	generateObjectBufferMesh(2);
+	generateObjectBufferMesh(3);
 
 	glBindVertexArray(0);
 	glEnable(GL_CULL_FACE);
@@ -518,6 +490,10 @@ void keypress(unsigned char key, int x, int y) {
 		break;
 	case ' ':
 		resetCamera();
+		//score += 10;
+		//std::string s = std::to_string(score);
+		//char const *pchar = s.c_str();  //use char const* as target type
+		//score_id = add_text("Score: ", -0.95f, -0.9f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 		break;
 	case 27:
 		exit(0);
