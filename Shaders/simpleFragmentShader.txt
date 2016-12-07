@@ -2,10 +2,17 @@
 
 in vec3 LightIntensity;
 in vec2 TexCoord;
+in float visibility;
 
 uniform sampler2D theTexture;
 
+//Optionally: Change this to a uniform variable (can be used for day/night cycle)
+const vec3 skyColor = vec3 (0.7, 0.7, 0.8);
+
+out vec4 gl_FragColor;
 void main(){
     //* (vec4 (LightIntensity, 1.0));
+	
 	gl_FragColor = texture(theTexture, TexCoord) * (vec4 (LightIntensity, 1.0));
+	gl_FragColor = mix(vec4(skyColor, 1.0), gl_FragColor, visibility);
 }

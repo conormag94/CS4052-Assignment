@@ -20,6 +20,7 @@
 #include "../SOIL.h"
 #include "text.h"
 
+
 /*----------------------------------------------------------------------------
 MESH TO LOAD
 ----------------------------------------------------------------------------*/
@@ -29,11 +30,11 @@ MESH TO LOAD
 
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
+// Mesh Variables
 const int num_meshes = 5;
 char* mesh_names[num_meshes] = { "../Meshes/plane_2.obj", "../Meshes/tower.obj", "../Meshes/windmill2.obj", "../Meshes/enemy.obj", "../Meshes/gun.obj" };
 std::vector<float> g_vp[num_meshes], g_vn[num_meshes], g_vt[num_meshes];
 int g_point_count[num_meshes] = { 0, 0, 0, 0, 0};
-
 unsigned int g_vao[num_meshes] = { 1, 2, 3, 4, 5};
 
 GLuint loc1, loc2, loc3;
@@ -41,13 +42,10 @@ GLuint loc1, loc2, loc3;
 bool warped;
 bool fired;
 
-// Tex
+// Texture Stuff
 int tWidth, tHeight;
 unsigned char* image;
 GLuint texture1, texture2;
-
-GLfloat fogColour[4] = { 1, 0, 0, 1 };
-GLfloat density = 0.5;
 
 // Macro for indexing vertex buffer
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
@@ -55,8 +53,8 @@ GLfloat density = 0.5;
 using namespace std;
 GLuint shaderProgramID;
 
-GLuint width = 1920;
-GLuint height = 1080;
+GLuint width = 800;
+GLuint height = 600;
 
 GLfloat rotate_y = 0.0f;
 vec3 enemyPos = vec3(5.0, 0.0, 0.0);
@@ -64,7 +62,7 @@ vec3 enemyPos = vec3(5.0, 0.0, 0.0);
 GLfloat speed = 0.15;
 int score = 0;
 
-int hello_id, score_id, player_info_id, enemy_info_id, bullet_info_id;
+int crosshair_id, score_id, player_info_id, enemy_info_id, bullet_info_id;
 
 // Camera starting position
 vec3 cameraPos = vec3(12.0f, 1.5f, 7.0f);
@@ -87,6 +85,8 @@ public:
 
 Bullet testBullet;	
 
+//Bullet bullets[5];
+std::vector<Bullet> bullets;
 
 
 #pragma region MESH LOADING
@@ -297,6 +297,62 @@ void generateObjectBufferMesh(int mesh_index) {
 
 #pragma endregion VBO_FUNCTIONS
 
+void spawn_bullet() {
+	Bullet temp;
+	vec3 _cameraPos = cameraPos;
+	temp.bullet_position = _cameraPos + cameraFront;
+	//testBullet.bullet_position.v[1] -= 0.4;
+	//testBullet.bullet_position.v[0] += 0.4;
+	temp.bullet_front = cameraFront;
+	bullets.push_back(temp);
+	printf("Bullet spawned\n");
+}
+
+void move_bullets(int delta) {
+	int len = bullets.size();
+	for (int i = 0; i < len; i++) {
+		printf("(%f, %f, %f) -->", bullets[i].bullet_position.v[0], bullets[i].bullet_position.v[1], bullets[i].bullet_position.v[2]);
+		vec3 distance_to_move = (bullets[i].bullet_front * (delta * 50.0f));
+		//vec3 distance_to_move = vec3(0.0, 0.0, -0.0001f);
+		bullets[i].bullet_position += distance_to_move;// testBullet.bullet_front;
+		//printf("Bullet moved\n");
+		printf("(%f, %f, %f)\n", bullets[i].bullet_position.v[0], bullets[i].bullet_position.v[1], bullets[i].bullet_position.v[2]);
+	}
+}
+
+void updateScore(int score_increase) {
+	score += score_increase;
+	char new_score[50];
+	//sprintf(new_score, "Score: %03d\n", score);
+	sprintf(new_score, "Score: %d\n", score);
+	update_text(score_id, new_score);
+}
+
+void positionInfo() {
+	char temp[50];
+	sprintf(temp, "P: (%f, %f, %f)\n", cameraPos.v[0], cameraPos.v[1], cameraPos.v[2]);
+	update_text(player_info_id, temp);
+	sprintf(temp, "E: (%f, %f, %f)\n", enemyPos.v[0], enemyPos.v[1], enemyPos.v[2]);
+	update_text(enemy_info_id, temp);
+}
+
+void bulletInfo() {
+	char temp[50];
+	sprintf(temp, "B: (%f, %f, %f)\n", testBullet.bullet_position.v[0], testBullet.bullet_position.v[1], testBullet.bullet_position.v[2]);
+	update_text(bullet_info_id, temp);
+}
+
+void doCollision(Bullet theBullet) {
+	if (fired) {
+		if ((testBullet.bullet_position.v[0] < (enemyPos.v[0] + 0.5) && testBullet.bullet_position.v[0] > (enemyPos.v[0] - 0.5))
+			&& (testBullet.bullet_position.v[1] < 1.0f && testBullet.bullet_position.v[1] > 0.0f)
+			&& (testBullet.bullet_position.v[2] < (enemyPos.v[2] + 0.5) && testBullet.bullet_position.v[2] > (enemyPos.v[2] - 0.5))) {
+			updateScore(101);
+		}
+	}
+
+
+}
 
 void display() {
 
@@ -305,7 +361,8 @@ void display() {
 	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClearColor(0.0f, 0.7, 0.8, 1.0f);
+	glClearColor(0.0f, 0.7f, 0.8f, 1.0f);
+	//glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 	glUseProgram(shaderProgramID);
 
 	//Declare your uniform variables that will be used in your shader
@@ -322,7 +379,6 @@ void display() {
 
 	//glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture1);
-	//glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
 
 	// update uniforms & draw
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, persp_proj.m);
@@ -371,18 +427,18 @@ void display() {
 	glDrawArrays(GL_TRIANGLES, 0, g_point_count[3]);
 
 	if (fired) {
-		mat4 bulletPersp = perspective(45.0, (float)width / (float)height, 0.1, 100.0);
-		mat4 bulletLocal = identity_mat4();
-		bulletLocal = scale(bulletLocal, vec3(0.02, 0.02, 0.02));
-		bulletLocal = translate(bulletLocal, testBullet.bullet_position);
-		//bulletLocal = scale(bulletLocal, vec3(0.25, 0.25, 0.25));
+		for (int i = 0; i < bullets.size(); i++) {
+			mat4 bulletLocal = identity_mat4();
+			bulletLocal = scale(bulletLocal, vec3(0.02, 0.02, 0.02));
+			bulletLocal = translate(bulletLocal, bullets[i].bullet_position);
+			//bulletLocal = scale(bulletLocal, vec3(0.25, 0.25, 0.25));
 
-		mat4 bulletGlobal = bulletLocal;
-		glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, bulletPersp.m);
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, bulletGlobal.m);
+			mat4 bulletGlobal = bulletLocal;
+			glUniformMatrix4fv(matrix_location, 1, GL_FALSE, bulletGlobal.m);
 
-		glBindVertexArray(g_vao[3]);
-		glDrawArrays(GL_TRIANGLES, 0, g_point_count[3]);
+			glBindVertexArray(g_vao[3]);
+			glDrawArrays(GL_TRIANGLES, 0, g_point_count[3]);
+		}
 	}
 	
 	// ***********GUN*******************
@@ -416,40 +472,6 @@ void display() {
 	glutSwapBuffers();
 }
 
-void updateScore(int score_increase) {
-	score += score_increase;
-	char new_score[50];
-	//sprintf(new_score, "Score: %03d\n", score);
-	sprintf(new_score, "Score: %d\n", score);
-	update_text(score_id, new_score);
-}
-
-void positionInfo() {
-	char temp[50];
-	sprintf(temp, "P: (%f, %f, %f)\n", cameraPos.v[0], cameraPos.v[1], cameraPos.v[2]);
-	update_text(player_info_id, temp);
-	sprintf(temp, "E: (%f, %f, %f)\n", enemyPos.v[0], enemyPos.v[1], enemyPos.v[2]);
-	update_text(enemy_info_id, temp);
-}
-
-void bulletInfo() {
-	char temp[50];
-	sprintf(temp, "B: (%f, %f, %f)\n", testBullet.bullet_position.v[0], testBullet.bullet_position.v[1], testBullet.bullet_position.v[2]);
-	update_text(bullet_info_id, temp);
-}
-
-void doCollision(Bullet theBullet) {
-	if (fired) {
-		if ((testBullet.bullet_position.v[0] < (enemyPos.v[0] + 0.5) && testBullet.bullet_position.v[0] > (enemyPos.v[0] - 0.5))
-			&& (testBullet.bullet_position.v[1] < 1.0f && testBullet.bullet_position.v[1] > 0.0f)
-			&& (testBullet.bullet_position.v[2] < (enemyPos.v[2] + 0.5) && testBullet.bullet_position.v[2] > (enemyPos.v[2] - 0.5))) {
-			updateScore(101);
-		}
-	}
-	
-		
-}
-
 void updateScene() {
 
 	// Placeholder code, if you want to work with framerate
@@ -464,13 +486,19 @@ void updateScene() {
 	if (fired) {
 		bulletInfo();
 		doCollision(testBullet);
+		//if (bullets.size() > 0)
+			//move_bullets(delta);
 
 	}
 	// rotate the model slowly around the y axis
-	rotate_y += 0.05f;
+	rotate_y += 10.0f * delta;
+
+	move_bullets(delta);
+	//doCollision()
+
 	//enemyPos.v[0] += 0.01f;
-	vec3 distance_moved = testBullet.bullet_front / 2.5;
-	testBullet.bullet_position += distance_moved;// testBullet.bullet_front;
+	//vec3 distance_moved = (testBullet.bullet_front * (delta * 50.0f));
+	//testBullet.bullet_position += distance_moved;// testBullet.bullet_front;
 
 	// Draw the next frame
 	glutPostRedisplay();
@@ -479,14 +507,6 @@ void updateScene() {
 
 void init()
 {
-	glFogi(GL_FOG_MODE, GL_LINEAR);
-	glFogfv(GL_FOG_COLOR, fogColour);
-	glFogf(GL_FOG_DENSITY, density);
-	glHint(GL_FOG_HINT, GL_NICEST);
-	glFogf(GL_FOG_START, 1.0f);
-	glFogf(GL_FOG_END, 100.0f);
-	glEnable(GL_FOG);
-
 	warped = false;
 	fired = false;
 	// Set up the shaders
@@ -497,7 +517,7 @@ void init()
 	// size_px is the maximum glyph size in pixels (try 100.0f)
 	// r,g,b,a are red,blue,green,opacity values between 0.0 and 1.0
 	// if you want to change the text later you will use the returned integer as a parameter
-	hello_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 0.75f);
+	crosshair_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 0.75f);
 	score_id = add_text("Score: 0", -0.95f, -0.9f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	player_info_id = add_text("Player Position", -0.95f, 0.9f, 25.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	enemy_info_id = add_text("Enemy Position", -0.95f, 0.8f, 25.0f, 1.0f, 1.0f, 1.0f, 1.0f);
@@ -545,7 +565,7 @@ void init()
 }
 
 
-
+#pragma region MOVEMENT_CALLBACKS
 void resetCamera() {
 	cameraPos = vec3(10.0f, 1.5f, 2.0f);
 	cameraFront = vec3(0.0f, 0.0f, -1.0f);
@@ -635,6 +655,14 @@ void mouseClick(int button, int state, int x, int y) {
 		vec3 _cameraPos = cameraPos;
 		//_cameraPos.v[0] += 0.4;
 		//_cameraPos.v[1] -= 0.4;
+		
+		//spawn_bullet(); // Will replace the below code
+
+		Bullet temp;
+		temp.bullet_position = _cameraPos + cameraFront;
+		temp.bullet_front = cameraFront;
+		bullets.push_back(temp);
+
 		testBullet.bullet_position = _cameraPos + cameraFront;
 		//testBullet.bullet_position.v[1] -= 0.4;
 		//testBullet.bullet_position.v[0] += 0.4;
@@ -643,6 +671,8 @@ void mouseClick(int button, int state, int x, int y) {
 		positionInfo();
 	}
 }
+#pragma endregion MOVEMENT_CALLBACKS
+
 
 int main(int argc, char** argv) {
 

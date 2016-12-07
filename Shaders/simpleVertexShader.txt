@@ -6,6 +6,7 @@ in vec2 vertex_texture;
 
 out vec3 LightIntensity;
 out vec2 TexCoord;
+out float visibility;
 
 // Light position in world coords.
 vec4 LightPosition = vec4 (10.0, 10.0, 4.0, 1.0); 
@@ -19,7 +20,8 @@ vec3 Kd = vec3 (0.8, 0.8, 0.8); // green-blue diffuse surface reflectance
 vec3 Ka = vec3 (0.5, 0.5, 0.5); // reflect some ambient light
 
 float specular_power = 20.0;
-
+float fog_density = 0.07;
+float fog_gradient = 0.2;
 
 uniform mat4 view;
 uniform mat4 proj;
@@ -61,6 +63,11 @@ void main(){
 	// Flip the y coord because it starts in the bottom left corner instead of top left
 	TexCoord = vec2 (vertex_texture.x, 1 - vertex_texture.y);
   
+	vec4 positionRelativeToCam = view * (vec4(vertex_position, 1.0) * model);
+	float distance = length(positionRelativeToCam.xyz);
+	visibility = exp(-pow((distance * fog_density), fog_gradient));
+	visibility = clamp(visibility, 0.0, 1.0);
+
     // Convert position to clip coordinates and pass along
     gl_Position = proj * view * model * vec4(vertex_position,1.0);
 }
