@@ -20,27 +20,26 @@
 #include "../SOIL.h"
 #include "text.h"
 
-
-
 /*----------------------------------------------------------------------------
 MESH TO LOAD
 ----------------------------------------------------------------------------*/
 // this mesh is a dae file format but you should be able to use any other format too, obj is typically what is used
 // put the mesh in your project directory, or provide a filepath for it here
 #define MESH_NAME "../Meshes/plane.obj"
-#define MESH_NAME_2 "../Meshes/tree.dae"
 
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
-char* mesh_names[4] = { "../Meshes/plane_2.obj", "../Meshes/tower.obj", "../Meshes/windmill2.obj", "../Meshes/enemy.obj" };
-std::vector<float> g_vp[4], g_vn[4], g_vt[4];
-int g_point_count[4] = { 0, 0, 0, 0 };
+const int num_meshes = 5;
+char* mesh_names[num_meshes] = { "../Meshes/plane_2.obj", "../Meshes/tower.obj", "../Meshes/windmill2.obj", "../Meshes/enemy.obj", "../Meshes/gun.obj" };
+std::vector<float> g_vp[num_meshes], g_vn[num_meshes], g_vt[num_meshes];
+int g_point_count[num_meshes] = { 0, 0, 0, 0, 0};
 
-unsigned int g_vao[4] = { 1, 2, 3, 4};
+unsigned int g_vao[num_meshes] = { 1, 2, 3, 4, 5};
 
 GLuint loc1, loc2, loc3;
 
 bool warped;
+bool fired;
 
 // Tex
 int tWidth, tHeight;
@@ -65,10 +64,10 @@ vec3 enemyPos = vec3(5.0, 0.0, 0.0);
 GLfloat speed = 0.15;
 int score = 0;
 
-int hello_id, score_id;
+int hello_id, score_id, player_info_id, enemy_info_id, bullet_info_id;
 
 // Camera starting position
-vec3 cameraPos = vec3(2.0f, 1.0f, 7.0f);
+vec3 cameraPos = vec3(12.0f, 1.5f, 7.0f);
 vec3 cameraFront = vec3(0.0f, 0.0f, -1.0f);
 vec3 cameraUp = vec3(0.0f, 1.0f, 0.0f);
 
@@ -76,6 +75,18 @@ GLfloat yaw = -90.0f;
 GLfloat pitch = 0.0f;
 GLfloat lastX = width / 2.0;
 GLfloat lastY = height / 2.0;
+
+
+class Bullet
+{
+public:
+	vec3 bullet_position;
+	vec3 bullet_front;
+	int speed;
+};
+
+Bullet testBullet;	
+
 
 
 #pragma region MESH LOADING
@@ -348,7 +359,10 @@ void display() {
 
 	// *************ENEMY***************************
 	mat4 enemyLocal = identity_mat4();
+	enemyLocal = scale(enemyLocal, vec3(0.5, 0.5, 0.5));
 	enemyLocal = translate(enemyLocal, enemyPos);
+	//enemyLocal = translate(enemyLocal, vec3(12.0, 0.0, -3.0));
+	
 	
 	mat4 enemyGlobal = model * enemyLocal;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, enemyGlobal.m);
@@ -356,21 +370,42 @@ void display() {
 	glBindVertexArray(g_vao[3]);
 	glDrawArrays(GL_TRIANGLES, 0, g_point_count[3]);
 
-	//// Gun
-	//mat4 gunView = identity_mat4();
-	//mat4 gunPersp_proj = perspective(45.0, (float)width / (float)height, 0.1, 100.0);
-	//mat4 gunModel = identity_mat4();
+	if (fired) {
+		mat4 bulletPersp = perspective(45.0, (float)width / (float)height, 0.1, 100.0);
+		mat4 bulletLocal = identity_mat4();
+		bulletLocal = scale(bulletLocal, vec3(0.02, 0.02, 0.02));
+		bulletLocal = translate(bulletLocal, testBullet.bullet_position);
+		//bulletLocal = scale(bulletLocal, vec3(0.25, 0.25, 0.25));
+
+		mat4 bulletGlobal = bulletLocal;
+		glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, bulletPersp.m);
+		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, bulletGlobal.m);
+
+		glBindVertexArray(g_vao[3]);
+		glDrawArrays(GL_TRIANGLES, 0, g_point_count[3]);
+	}
+	
+	// ***********GUN*******************
+	glBindTexture(GL_TEXTURE_2D, texture1);
+	mat4 gunView = identity_mat4();
+	mat4 gunPersp_proj = perspective(45.0, (float)width / (float)height, 0.1, 100.0);
+	mat4 gunModel = identity_mat4();
+
+	gunModel = rotate_y_deg(gunModel, 180.0);
+	//gunModel = translate(gunModel, vec3(0.0, -0.05, -0.15));
+
+	// Gun on RHS
 	//gunModel = rotate_y_deg(gunModel, 180.0);
-	//gunModel = translate(gunModel, vec3(0.05, -0.05, -0.15));
-	//
+	gunModel = translate(gunModel, vec3(0.05, -0.05, -0.15));
+	
 
-	//glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, gunPersp_proj.m);
-	//glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, gunView.m);
-	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, gunModel.m);
+	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, gunPersp_proj.m);
+	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, gunView.m);
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, gunModel.m);
 
 
-	//glBindVertexArray(g_vao[2]);
-	//glDrawArrays(GL_TRIANGLES, 0, g_point_count[2]);
+	glBindVertexArray(g_vao[4]);
+	glDrawArrays(GL_TRIANGLES, 0, g_point_count[4]);
 
 
 	glBindVertexArray(0);
@@ -381,6 +416,39 @@ void display() {
 	glutSwapBuffers();
 }
 
+void updateScore(int score_increase) {
+	score += score_increase;
+	char new_score[50];
+	//sprintf(new_score, "Score: %03d\n", score);
+	sprintf(new_score, "Score: %d\n", score);
+	update_text(score_id, new_score);
+}
+
+void positionInfo() {
+	char temp[50];
+	sprintf(temp, "P: (%f, %f, %f)\n", cameraPos.v[0], cameraPos.v[1], cameraPos.v[2]);
+	update_text(player_info_id, temp);
+	sprintf(temp, "E: (%f, %f, %f)\n", enemyPos.v[0], enemyPos.v[1], enemyPos.v[2]);
+	update_text(enemy_info_id, temp);
+}
+
+void bulletInfo() {
+	char temp[50];
+	sprintf(temp, "B: (%f, %f, %f)\n", testBullet.bullet_position.v[0], testBullet.bullet_position.v[1], testBullet.bullet_position.v[2]);
+	update_text(bullet_info_id, temp);
+}
+
+void doCollision(Bullet theBullet) {
+	if (fired) {
+		if ((testBullet.bullet_position.v[0] < (enemyPos.v[0] + 0.5) && testBullet.bullet_position.v[0] > (enemyPos.v[0] - 0.5))
+			&& (testBullet.bullet_position.v[1] < 1.0f && testBullet.bullet_position.v[1] > 0.0f)
+			&& (testBullet.bullet_position.v[2] < (enemyPos.v[2] + 0.5) && testBullet.bullet_position.v[2] > (enemyPos.v[2] - 0.5))) {
+			updateScore(101);
+		}
+	}
+	
+		
+}
 
 void updateScene() {
 
@@ -393,9 +461,16 @@ void updateScene() {
 		delta = 0.03f;
 	last_time = curr_time;
 
+	if (fired) {
+		bulletInfo();
+		doCollision(testBullet);
+
+	}
 	// rotate the model slowly around the y axis
 	rotate_y += 0.05f;
-	enemyPos.v[0] += 0.02f;
+	//enemyPos.v[0] += 0.01f;
+	vec3 distance_moved = testBullet.bullet_front / 2.5;
+	testBullet.bullet_position += distance_moved;// testBullet.bullet_front;
 
 	// Draw the next frame
 	glutPostRedisplay();
@@ -413,6 +488,7 @@ void init()
 	glEnable(GL_FOG);
 
 	warped = false;
+	fired = false;
 	// Set up the shaders
 	GLuint shaderProgramID = CompileShaders();
 
@@ -421,8 +497,11 @@ void init()
 	// size_px is the maximum glyph size in pixels (try 100.0f)
 	// r,g,b,a are red,blue,green,opacity values between 0.0 and 1.0
 	// if you want to change the text later you will use the returned integer as a parameter
-	hello_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-	score_id = add_text("Score: ", -0.95f, -0.9f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	hello_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 0.75f);
+	score_id = add_text("Score: 0", -0.95f, -0.9f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	player_info_id = add_text("Player Position", -0.95f, 0.9f, 25.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	enemy_info_id = add_text("Enemy Position", -0.95f, 0.8f, 25.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	bullet_info_id = add_text("Bullet Position", -0.95f, 0.7f, 25.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	glGenTextures(1, &texture1);
 	glBindTexture(GL_TEXTURE_2D, texture1); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object
@@ -459,10 +538,13 @@ void init()
 	generateObjectBufferMesh(1);
 	generateObjectBufferMesh(2);
 	generateObjectBufferMesh(3);
+	generateObjectBufferMesh(4);
 
 	glBindVertexArray(0);
 	glEnable(GL_CULL_FACE);
 }
+
+
 
 void resetCamera() {
 	cameraPos = vec3(10.0f, 1.5f, 2.0f);
@@ -472,7 +554,11 @@ void resetCamera() {
 
 // Placeholder code for the keypress
 void keypress(unsigned char key, int x, int y) {
+	printf("Pos: %f, %f, %f | Front: %f, %f, %f\n",
+		testBullet.bullet_position.v[0], testBullet.bullet_position.v[1], testBullet.bullet_position.v[2],
+		testBullet.bullet_front.v[0], testBullet.bullet_front.v[1], testBullet.bullet_front.v[2]);
 
+	
 	GLfloat cameraSpeed = speed;
 	switch (key)
 	{
@@ -490,10 +576,7 @@ void keypress(unsigned char key, int x, int y) {
 		break;
 	case ' ':
 		resetCamera();
-		//score += 10;
-		//std::string s = std::to_string(score);
-		//char const *pchar = s.c_str();  //use char const* as target type
-		//score_id = add_text("Score: ", -0.95f, -0.9f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+		//updateScore(10);
 		break;
 	case 27:
 		exit(0);
@@ -501,8 +584,10 @@ void keypress(unsigned char key, int x, int y) {
 	}
 	// Keeps user at ground level
 	cameraPos.v[1] = 1.5f;
+	positionInfo();
 
 }
+
 
 
 bool firstMouse = true;
@@ -544,6 +629,21 @@ void mouse(int x, int y) {
 
 }
 
+void mouseClick(int button, int state, int x, int y) {
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+		updateScore(10);
+		vec3 _cameraPos = cameraPos;
+		//_cameraPos.v[0] += 0.4;
+		//_cameraPos.v[1] -= 0.4;
+		testBullet.bullet_position = _cameraPos + cameraFront;
+		//testBullet.bullet_position.v[1] -= 0.4;
+		//testBullet.bullet_position.v[0] += 0.4;
+		testBullet.bullet_front = cameraFront;
+		fired = true;
+		positionInfo();
+	}
+}
+
 int main(int argc, char** argv) {
 
 	// Set up the window
@@ -557,6 +657,7 @@ int main(int argc, char** argv) {
 	glutIdleFunc(updateScene);
 	glutKeyboardFunc(keypress);
 	glutPassiveMotionFunc(mouse);
+	glutMouseFunc(mouseClick);
 	glutSetCursor(GLUT_CURSOR_NONE);
 	glutWarpPointer(width / 2, height / 2);
 
