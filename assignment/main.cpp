@@ -19,6 +19,7 @@
 
 #include "../SOIL.h"
 #include "text.h"
+#include <irrKlang.h>
 
 
 /*----------------------------------------------------------------------------
@@ -42,6 +43,7 @@ GLuint loc1, loc2, loc3;
 
 bool warped;
 bool fired;
+bool freecam_enabled = false;
 
 // Texture Stuff
 int tWidth, tHeight;
@@ -51,7 +53,11 @@ GLuint texture1, texture2;
 // Macro for indexing vertex buffer
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
+using namespace irrklang;
+ISoundEngine *SoundEngine = createIrrKlangDevice();
+
 using namespace std;
+
 GLuint shaderProgramID;
 
 GLuint width = 1920;
@@ -67,6 +73,7 @@ const int ALIVE_STATE = 1;
 const int DEAD_STATE = -1;
 
 int crosshair_id, score_id, player_info_id, enemy_info_id, bullet_info_id;
+int player_hb_id;
 
 // Camera starting position
 vec3 cameraPos = vec3(0.0f, 1.5f, 20.0f);
@@ -80,6 +87,13 @@ GLfloat pitch = 0.0f;
 GLfloat lastX = width / 2.0;
 GLfloat lastY = height / 2.0;
 
+
+class BoundingBox
+{
+public:
+	vec3 min;
+	vec3 max;
+};
 
 class Bullet
 {
@@ -96,13 +110,9 @@ public:
 	vec3 enemy_position;
 	vec3 enemy_front;
 	float speed;
-	float minX;
-	float maxX;
-	float minZ;
-	float maxZ;
+	BoundingBox hitbox;
 	int enemy_state;
 };
-
 
 Bullet testBullet;	
 
@@ -110,6 +120,7 @@ Bullet testBullet;
 std::vector<Bullet> bullets;
 std::vector<Enemy> enemies;
 
+BoundingBox player_hitbox;
 
 #pragma region MESH LOADING
 /*----------------------------------------------------------------------------
@@ -341,19 +352,24 @@ void spawn_enemy() {
 	Enemy temp;
 	temp.enemy_position = vec3(xpos, 0.0, 0.0);
 	temp.enemy_front = vec3(0.0, 0.0, 1.0);
-	temp.minX = temp.enemy_position.v[0] - 0.5f;
-	temp.maxX = temp.enemy_position.v[0] + 0.5f;
-	temp.minZ = temp.enemy_position.v[2] - 0.5f;
-	temp.maxZ = temp.enemy_position.v[2] + 0.5f;
-	temp.speed = 1.0f;
+	BoundingBox _box;
+	_box.min = vec3(temp.enemy_position.v[0] - 0.5f, 0, temp.enemy_position.v[2] - 0.5f);
+	_box.max = vec3(temp.enemy_position.v[0] + 0.5f, 1, temp.enemy_position.v[2] + 0.5f);
+	temp.hitbox = _box;
+	temp.speed = 5.0f;
 	temp.enemy_state = ALIVE_STATE;
 	enemies.push_back(temp);
 }
 
 void move_enemies(float delta) {
 	for (int i = 0; i < enemies.size(); i++) {
-		if (enemies[i].enemy_state == ALIVE_STATE)
+		if (enemies[i].enemy_state == ALIVE_STATE) {
 			enemies[i].enemy_position += (enemies[i].enemy_front * (delta * enemies[i].speed));
+			BoundingBox _box;
+			_box.min = vec3(enemies[i].enemy_position.v[0] - 0.5f, 0, enemies[i].enemy_position.v[2] - 0.5f);
+			_box.max = vec3(enemies[i].enemy_position.v[0] + 0.5f, 1, enemies[i].enemy_position.v[2] + 0.5f);
+			enemies[i].hitbox = _box;
+		}
 	}
 }
 
@@ -379,22 +395,35 @@ void bulletInfo() {
 	update_text(bullet_info_id, temp);
 }
 
-bool collided_with(Bullet b, Enemy e) {
+void hitbox_info() {
+	char temp[50];
+	sprintf(temp, "Min: (%f, %f, %f)\n", player_hitbox.min.v[0], player_hitbox.min.v[1], player_hitbox.min.v[2]);
+	update_text(player_hb_id, temp);
+}
+
+
+bool intersect(BoundingBox a, BoundingBox b) {
 	return (
-		b.bullet_position.v[0] < (e.enemy_position.v[0] + 0.5) 
-		&& b.bullet_position.v[0] > (e.enemy_position.v[0] - 0.5)
-		&& b.bullet_position.v[1] < 1.0f 
-		&& b.bullet_position.v[1] > 0.0f
-		&& b.bullet_position.v[2] < (e.enemy_position.v[2] + 0.5) 
-		&& b.bullet_position.v[2] > (e.enemy_position.v[2] - 0.5)
+		(a.min.v[0] <= b.max.v[0] && a.max.v[0] >= b.min.v[0]) &&	
+		(a.min.v[1] <= b.max.v[1] && a.max.v[1] >= b.min.v[1]) &&
+		(a.min.v[2] <= b.max.v[2] && a.max.v[2] >= b.min.v[2])
+	);
+	
+}
+
+bool collided_with(Bullet b, Enemy e) {
+	vec3 min = e.hitbox.min;
+	vec3 max = e.hitbox.max;
+	vec3 pos = b.bullet_position;
+	return (
+		pos.v[0] >= min.v[0] &&
+		pos.v[0] <= max.v[0] &&
+		pos.v[1] >= min.v[1] &&
+		pos.v[1] <= max.v[1] &&
+		pos.v[2] >= min.v[2] &&
+		pos.v[2] <= max.v[2]
 	);
 
-	/*if ((b.bullet_position.v[0] < (e.enemy_position.v[0] + 0.5) && b.bullet_position.v[0] > (e.enemy_position.v[0] - 0.5))
-		&& (b.bullet_position.v[1] < 1.0f && b.bullet_position.v[1] > 0.0f)
-		&& (b.bullet_position.v[2] < (e.enemy_position.v[2] + 0.5) && b.bullet_position.v[2] > (e.enemy_position.v[2] - 0.5))) {
-		updateScore(101);
-		enemies.erase(enemies.begin() + i);
-	}*/
 }
 void doCollision() {
 	for (int i = 0; i < bullets.size(); i++) {
@@ -403,7 +432,6 @@ void doCollision() {
 			Enemy e = enemies[j];
 			if (e.enemy_state == ALIVE_STATE && collided_with(b, e)) {
 				updateScore(101);
-				//enemies.erase(enemies.begin() + i);
 				enemies[j].enemy_state = DEAD_STATE;
 			}
 		}
@@ -522,10 +550,8 @@ void display() {
 	mat4 gunModel = identity_mat4();
 
 	gunModel = rotate_y_deg(gunModel, 180.0);
-	//gunModel = translate(gunModel, vec3(0.0, -0.05, -0.15));
 
 	// Gun on RHS
-	//gunModel = rotate_y_deg(gunModel, 180.0);
 	gunModel = translate(gunModel, vec3(0.05, -0.05, -0.15));
 	
 
@@ -564,12 +590,17 @@ void updateScene() {
 			//move_bullets(delta);
 
 	}
+	for (int i = 0; i < enemies.size(); i++) {
+		if (intersect(enemies[i].hitbox, player_hitbox))
+			updateScore(-score);
+	}
 	// rotate the model slowly around the y axis
 	rotate_y += 10.0f * delta;
 	enemyPos.v[2] += 2.0f * delta;
 	move_enemies(delta);
 	move_bullets(delta);
 	doCollision();
+	hitbox_info();
 
 	//enemyPos.v[0] += 0.01f;
 	//vec3 distance_moved = (testBullet.bullet_front * (delta * 50.0f));
@@ -582,8 +613,14 @@ void updateScene() {
 
 void init()
 {
+	SoundEngine->play2D("../Audio/breakout.mp3", GL_TRUE);
+
 	warped = false;
 	fired = false;
+
+	player_hitbox.min = vec3 (cameraPos.v[0] - 0.5f, 0, cameraPos.v[2] - 0.5f);
+	player_hitbox.max = vec3(cameraPos.v[0] + 0.5f, cameraPos.v[1] + 0.5f, cameraPos.v[2] + 0.5f);
+
 	// Set up the shaders
 	GLuint shaderProgramID = CompileShaders();
 
@@ -597,6 +634,7 @@ void init()
 	player_info_id = add_text("Player Position", -0.95f, -0.85f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	enemy_info_id = add_text("Enemy Position", -0.95f, -0.75f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	bullet_info_id = add_text("Bullet Position", -0.95f, -0.65f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	player_hb_id = add_text("Player HB Position", 0.5f, -0.65f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	glGenTextures(1, &texture1);
 	glBindTexture(GL_TEXTURE_2D, texture1); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object
@@ -672,6 +710,9 @@ void keypress(unsigned char key, int x, int y) {
 	case 'e':
 		spawn_enemy();
 		break;
+	case 'f':
+		freecam_enabled = (freecam_enabled == true) ? false : true;
+		break;
 	case ' ':
 		resetCamera();
 		//updateScore(10);
@@ -685,10 +726,14 @@ void keypress(unsigned char key, int x, int y) {
 	case 'i':
 		translateTest.v[0] += 1.0f;
 		break;
+
 	}
 	// Keeps user at ground level
-	cameraPos.v[1] = 1.5f;
+	if (!freecam_enabled)
+		cameraPos.v[1] = 1.5f;
 	positionInfo();
+	player_hitbox.min = vec3(cameraPos.v[0] - 0.5f, 0, cameraPos.v[2] - 0.5f);
+	player_hitbox.max = vec3(cameraPos.v[0] + 0.5f, cameraPos.v[1] + 0.5f, cameraPos.v[2] + 0.5f);
 
 }
 
