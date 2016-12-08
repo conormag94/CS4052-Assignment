@@ -66,6 +66,13 @@ int score = 0;
 const int ALIVE_STATE = 1;
 const int DEAD_STATE = -1;
 
+const float MAX_X = 50.0f;
+const float MIN_X = -50.0f;
+const float MAX_Y = 50.0f;
+const float MIN_Y = -50.0f;
+const float MAX_Z = 50.0f;
+const float MIN_Z = -50.0f;
+
 int crosshair_id, score_id, player_info_id, enemy_info_id, bullet_info_id;
 
 // Camera starting position
@@ -106,8 +113,8 @@ public:
 
 Bullet testBullet;	
 
-//Bullet bullets[5];
-std::vector<Bullet> bullets;
+Bullet bullets[AMMO_CAPACITY];
+//std::vector<Bullet> bullets;
 std::vector<Enemy> enemies;
 
 
@@ -320,19 +327,40 @@ void generateObjectBufferMesh(int mesh_index) {
 #pragma endregion VBO_FUNCTIONS
 
 void spawn_bullet() {
-	Bullet temp;
-	vec3 _cameraPos = cameraPos;
-	temp.bullet_position = _cameraPos + cameraFront;
-	temp.bullet_front = cameraFront;
-	temp.speed = 50.0f;
-	bullets.push_back(temp);
+	if (fired) {
+		for (int i = 0; i < AMMO_CAPACITY; i++) {
+			if (bullets[i].is_active == false) {
+				bullets[i].bullet_position = cameraPos + cameraFront;
+				bullets[i].bullet_front = cameraFront;
+				bullets[i].speed = 50.0f;
+				bullets[i].is_active = true;
+				break;
+			}
+		}
+
+		fired = false;
+	}
+}
+
+bool out_of_bounds(Bullet b) {
+	return (
+		b.bullet_position.v[0] < MAX_X
+		&& b.bullet_position.v[0] > MIN_X
+		&& b.bullet_position.v[1] < MAX_Y
+		&& b.bullet_position.v[1] > MIN_Y
+		&& b.bullet_position.v[2] < MAX_Z
+		&& b.bullet_position.v[2] > MIN_Z
+		);
 }
 
 void move_bullets(float delta) {
-	int len = bullets.size();
-	for (int i = 0; i < len; i++) {
-		vec3 distance_to_move = (bullets[i].bullet_front * (delta * bullets[i].speed));
-		bullets[i].bullet_position += distance_to_move;
+	for (int i = 0; i < AMMO_CAPACITY; i++) {
+		if (bullets[i].is_active) {
+			vec3 distance_to_move = (bullets[i].bullet_front * (delta * bullets[i].speed));
+			bullets[i].bullet_position += distance_to_move;
+		}
+		if (bullets[i].is_active && out_of_bounds(bullets[i]))
+			bullets[i].is_active = 0;
 	}
 }
 
@@ -397,14 +425,15 @@ bool collided_with(Bullet b, Enemy e) {
 	}*/
 }
 void doCollision() {
-	for (int i = 0; i < bullets.size(); i++) {
+	for (int i = 0; i < AMMO_CAPACITY; i++) {
 		Bullet b = bullets[i];
 		for (int j = 0; j < enemies.size(); j++){
-			Enemy e = enemies[j];
+			Enemy e = enemies[i];
 			if (e.enemy_state == ALIVE_STATE && collided_with(b, e)) {
 				updateScore(101);
 				//enemies.erase(enemies.begin() + i);
 				enemies[j].enemy_state = DEAD_STATE;
+				bullets[i].is_active = false;
 			}
 		}
 	}
@@ -500,8 +529,9 @@ void display() {
 		}
 	}
 
-	if (fired) {
-		for (int i = 0; i < bullets.size(); i++) {
+
+	for (int i = 0; i < AMMO_CAPACITY; i++) {
+		if (bullets[i].is_active) {
 			mat4 bulletLocal = identity_mat4();
 			bulletLocal = scale(bulletLocal, vec3(0.02, 0.02, 0.02));
 			bulletLocal = translate(bulletLocal, bullets[i].bullet_position);

@@ -11,7 +11,7 @@ out float visibility;
 // Light position in world coords.
 vec4 LightPosition = vec4 (10.0, 10.0, 4.0, 1.0); 
 
-vec3 Ls = vec3 (0.0, 1.0, 1.0); // white specular colour
+vec3 Ls = vec3 (1.0, 1.0, 1.0); // white specular colour
 vec3 Ld = vec3 (1.0, 1.0, 1.0); // Light source intensity
 vec3 La = vec3 (0.2, 0.2, 0.2); // dark-grey ambient colour
 
