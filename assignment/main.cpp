@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <vector> // STL dynamic memory.
+#include <random>
 
 #include "../SOIL.h"
 #include "text.h"
@@ -29,26 +30,61 @@ MESH TO LOAD
 // put the mesh in your project directory, or provide a filepath for it here
 #define MESH_NAME "../Meshes/plane.obj"
 #define AMMO_CAPACITY 15
+#define MIN_X -27.0f
+#define MAX_X 27.5f
+#define MIN_Z -27.5f
+#define MAX_Z 27.5f
+#define NUM_SPAWNS 10
+
 
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
 // Mesh Variables
-const int num_meshes = 5;
-char* mesh_names[num_meshes] = { "../Meshes/plane_2.obj", "../Meshes/tower.obj", "../Meshes/windmill2.obj", "../Meshes/enemy.obj", "../Meshes/gun.obj" };
+const int num_meshes = 7;
+char* mesh_names[num_meshes] = { 
+	"../Meshes/plane_2.obj", 
+	"../Meshes/tower.obj", 
+	"../Meshes/windmill2.obj", 
+	"../Meshes/zombie.obj", 
+	"../Meshes/gun.obj",
+	"../Meshes/bullet.obj",
+	"../Meshes/house.obj"
+};
+
+vec3 spawn_points[NUM_SPAWNS] = {
+	vec3(0.0f, 0.0f, 0.0f),
+	vec3(2.0f, 0.0f, 0.0f),
+	vec3(4.0f, 0.0f, 0.0f),
+	vec3(6.0f, 0.0f, 0.0f),
+	vec3(8.0f, 0.0f, 0.0f),
+	vec3(-8.0f, 0.0f, 0.0f),
+	vec3(-6.0f, 0.0f, 0.0f),
+	vec3(-4.0f, 0.0f, 0.0f),
+	vec3(-2.0f, 0.0f, 0.0f),
+	vec3(20.0f, 0.0f, 0.0f),
+};
+
 std::vector<float> g_vp[num_meshes], g_vn[num_meshes], g_vt[num_meshes];
-int g_point_count[num_meshes] = { 0, 0, 0, 0, 0};
-unsigned int g_vao[num_meshes] = { 1, 2, 3, 4, 5};
+int g_point_count[num_meshes];// = { 0, 0, 0, 0, 0 };
+unsigned int g_vao[num_meshes];// = { 1, 2, 3, 4, 5 };
 
 GLuint loc1, loc2, loc3;
 
-bool warped;
 bool fired;
 bool freecam_enabled = false;
+bool sound_enabled = true;
+bool game_over = false;
+bool time_started = false;
+
+long elapsed_time;
+long start_time;
+
+int enemies_spawned = 0;
 
 // Texture Stuff
 int tWidth, tHeight;
 unsigned char* image;
-GLuint texture1, texture2;
+GLuint texture1, tex_atlas;
 
 // Macro for indexing vertex buffer
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
@@ -64,7 +100,6 @@ GLuint width = 1920;
 GLuint height =1080;
 
 GLfloat rotate_y = 0.0f;
-vec3 enemyPos = vec3(0.0, 0.0, 0.0);
 
 GLfloat speed = 0.15;
 int score = 0;
@@ -73,14 +108,18 @@ const int ALIVE_STATE = 1;
 const int DEAD_STATE = -1;
 
 int crosshair_id, score_id, player_info_id, enemy_info_id, bullet_info_id;
-int player_hb_id;
+int player_hb_id, game_over_id, time_id;
 
 // Camera starting position
-vec3 cameraPos = vec3(0.0f, 1.5f, 20.0f);
+vec3 cameraPos = vec3(0.0f, 1.5f, 10.0f);
 vec3 cameraFront = vec3(0.0f, 0.0f, -1.0f);
 vec3 cameraUp = vec3(0.0f, 1.0f, 0.0f);
 
-vec3 translateTest = vec3(0.0, 0.0, 0.0);
+GLfloat sky_red = 0.2f;
+GLfloat sky_green = 0.2f;
+GLfloat sky_blue = 0.2f;
+
+vec3 plane_translation = vec3(0.0, 0.0, 0.0);
 
 GLfloat yaw = -90.0f;
 GLfloat pitch = 0.0f;
@@ -335,7 +374,7 @@ void spawn_bullet() {
 	vec3 _cameraPos = cameraPos;
 	temp.bullet_position = _cameraPos + cameraFront;
 	temp.bullet_front = cameraFront;
-	temp.speed = 50.0f;
+	temp.speed = 80.0f;
 	bullets.push_back(temp);
 }
 
@@ -347,16 +386,29 @@ void move_bullets(float delta) {
 	}
 }
 
+// Pick random spawn locations from array of possible spawn point
+vec3 get_spawn_point() {
+	std::random_device rd;     // only used once to initialise (seed) engine
+	std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
+	std::uniform_int_distribution<int> uni(0, NUM_SPAWNS); // guaranteed unbiased
+
+	auto random_integer = uni(rng);
+
+	return spawn_points[random_integer];
+}
+
 void spawn_enemy() {
-	float xpos = (float)(enemies.size());
+	float xpos = (float)(enemies.size()); //TODO: Change this to random spot
 	Enemy temp;
-	temp.enemy_position = vec3(xpos, 0.0, 0.0);
+	vec3 spawn_point = get_spawn_point();
+	printf("Spawning Enemy %d @ <%f, %f, %f>\n", enemies_spawned++, spawn_point.v[0], spawn_point.v[1], spawn_point.v[2]);
+	temp.enemy_position = spawn_point;//vec3(xpos, 0.0, 0.0);
 	temp.enemy_front = vec3(0.0, 0.0, 1.0);
 	BoundingBox _box;
-	_box.min = vec3(temp.enemy_position.v[0] - 0.5f, 0, temp.enemy_position.v[2] - 0.5f);
-	_box.max = vec3(temp.enemy_position.v[0] + 0.5f, 1, temp.enemy_position.v[2] + 0.5f);
+	_box.min = vec3(temp.enemy_position.v[0] - 0.4f, 0, temp.enemy_position.v[2] - 0.4);
+	_box.max = vec3(temp.enemy_position.v[0] + 0.4f, 1.65f, temp.enemy_position.v[2] + 0.4f);
 	temp.hitbox = _box;
-	temp.speed = 5.0f;
+	temp.speed = 2.0f;
 	temp.enemy_state = ALIVE_STATE;
 	enemies.push_back(temp);
 }
@@ -364,10 +416,13 @@ void spawn_enemy() {
 void move_enemies(float delta) {
 	for (int i = 0; i < enemies.size(); i++) {
 		if (enemies[i].enemy_state == ALIVE_STATE) {
+			vec3 dir = vec3(cameraPos.v[0] - enemies[i].enemy_position.v[0], 0.0f, cameraPos.v[2] - enemies[i].enemy_position.v[2]);
+			
+			enemies[i].enemy_front = normalise(dir);
 			enemies[i].enemy_position += (enemies[i].enemy_front * (delta * enemies[i].speed));
 			BoundingBox _box;
-			_box.min = vec3(enemies[i].enemy_position.v[0] - 0.5f, 0, enemies[i].enemy_position.v[2] - 0.5f);
-			_box.max = vec3(enemies[i].enemy_position.v[0] + 0.5f, 1, enemies[i].enemy_position.v[2] + 0.5f);
+			_box.min = vec3(enemies[i].enemy_position.v[0] - 0.4f, 0, enemies[i].enemy_position.v[2] - 0.4f);
+			_box.max = vec3(enemies[i].enemy_position.v[0] + 0.4f, 1.65f, enemies[i].enemy_position.v[2] + 0.4f);
 			enemies[i].hitbox = _box;
 		}
 	}
@@ -376,8 +431,15 @@ void move_enemies(float delta) {
 void updateScore(int score_increase) {
 	score += score_increase;
 	char new_score[50];
-	sprintf(new_score, "Score: %d\n", score);
+	sprintf(new_score, "Zombies Killed: %d\n", score);
 	update_text(score_id, new_score);
+}
+
+void update_time() {
+	int time = elapsed_time / 1000;
+	char t[50];
+	sprintf(t, "Time: %d\n", time);
+	update_text(time_id, t);
 }
 
 // Prints object positions on screen for debugging
@@ -385,8 +447,6 @@ void positionInfo() {
 	char temp[50];
 	sprintf(temp, "P: (%f, %f, %f)\n", cameraPos.v[0], cameraPos.v[1], cameraPos.v[2]);
 	update_text(player_info_id, temp);
-	sprintf(temp, "E: (%f, %f, %f)\n", enemyPos.v[0], enemyPos.v[1], enemyPos.v[2]);
-	update_text(enemy_info_id, temp);
 }
 
 void bulletInfo() {
@@ -401,7 +461,7 @@ void hitbox_info() {
 	update_text(player_hb_id, temp);
 }
 
-
+// Check if two objects are colliding
 bool intersect(BoundingBox a, BoundingBox b) {
 	return (
 		(a.min.v[0] <= b.max.v[0] && a.max.v[0] >= b.min.v[0]) &&	
@@ -411,6 +471,7 @@ bool intersect(BoundingBox a, BoundingBox b) {
 	
 }
 
+// Check if a bullet has colliding with an enemy
 bool collided_with(Bullet b, Enemy e) {
 	vec3 min = e.hitbox.min;
 	vec3 max = e.hitbox.max;
@@ -425,17 +486,38 @@ bool collided_with(Bullet b, Enemy e) {
 	);
 
 }
-void doCollision() {
+
+void do_bullet_collision() {
 	for (int i = 0; i < bullets.size(); i++) {
 		Bullet b = bullets[i];
-		for (int j = 0; j < enemies.size(); j++){
-			Enemy e = enemies[j];
-			if (e.enemy_state == ALIVE_STATE && collided_with(b, e)) {
-				updateScore(101);
-				enemies[j].enemy_state = DEAD_STATE;
+		if (b.is_active) {
+			for (int j = 0; j < enemies.size(); j++) {
+				Enemy e = enemies[j];
+				if (e.enemy_state == ALIVE_STATE && collided_with(b, e)) {
+					updateScore(1);
+					enemies[j].enemy_state = DEAD_STATE;
+					bullets[i].is_active = false;
+				}
 			}
 		}
 	}
+}
+
+void do_object_collision() {
+	for (int i = 0; i < enemies.size(); i++) {
+		if (enemies[i].enemy_state == ALIVE_STATE && intersect(enemies[i].hitbox, player_hitbox)) {
+			game_over = true;
+		}
+	}
+}
+
+bool still_in_bounds(vec3 new_position) {
+	return (
+		new_position.v[0] > MIN_X &&
+		new_position.v[0] < MAX_X &&
+		new_position.v[2] > MIN_Z &&
+		new_position.v[2] < MAX_Z
+	);
 }
 
 void display() {
@@ -445,9 +527,18 @@ void display() {
 	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClearColor(0.7f, 0.7f, 0.8f, 1.0f);
+	glClearColor(sky_red, sky_green, sky_blue, 1.0f);
 	//glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 	glUseProgram(shaderProgramID);
+	
+	/*if (sky_blue < 0.8f)
+		sky_blue += 0.00001f;
+	else if (sky_green < 0.7f)
+		sky_green += 0.0001f;*/
+
+	glUniform1f(glGetUniformLocation(shaderProgramID, "sky_red"), sky_red);
+	glUniform1f(glGetUniformLocation(shaderProgramID, "sky_green"), sky_green);
+	glUniform1f(glGetUniformLocation(shaderProgramID, "sky_blue"), sky_blue);
 
 	//Declare your uniform variables that will be used in your shader
 	int matrix_location = glGetUniformLocation(shaderProgramID, "model");
@@ -455,15 +546,15 @@ void display() {
 	int proj_mat_location = glGetUniformLocation(shaderProgramID, "proj");
 
 
-	// Root of the Hierarchy
+	// ********** Plane (Root of the Hierarchy) **********
 	mat4 view = identity_mat4();
 	mat4 persp_proj = perspective(45.0, (float)width / (float)height, 0.1, 100.0);
 	mat4 model = identity_mat4();
-	model = translate(model, translateTest);
+	model = translate(model, plane_translation);
 	view = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
 
 	//glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture1);
+	glBindTexture(GL_TEXTURE_2D, tex_atlas);
 
 	// update uniforms & draw
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, persp_proj.m);
@@ -474,14 +565,27 @@ void display() {
 	glBindVertexArray(g_vao[0]);
 	glDrawArrays(GL_TRIANGLES, 0, g_point_count[0]);
 
+	// ********** House **********
+	glBindTexture(GL_TEXTURE_2D, tex_atlas);
 
-	// ************WINDMILL TOWER*********************
-	glBindTexture(GL_TEXTURE_2D, texture2);
+	mat4 houseLocal = identity_mat4();
+	houseLocal = scale(houseLocal, vec3(0.5, 0.5, 0.5));
+	houseLocal = rotate_y_deg(houseLocal, 180.0f);
+	houseLocal = translate(houseLocal, vec3(0.0f, 0.0f, 20.0f));
+
+	mat4 houseGlobal = model * houseLocal;
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, houseGlobal.m);
+
+	glBindVertexArray(g_vao[6]);
+	glDrawArrays(GL_TRIANGLES, 0, g_point_count[6]);
+
+	// ********** Windmill Tower **********
+	glBindTexture(GL_TEXTURE_2D, tex_atlas);
 	glUniform1i(glGetUniformLocation(shaderProgramID, "theTexture"), 0);
 
 	mat4 towerLocal = identity_mat4();
-	towerLocal = rotate_y_deg(towerLocal, -90.0f);
-	towerLocal = translate(towerLocal, vec3(-5.0f, 0.0f, -20.0f));
+	towerLocal = rotate_y_deg(towerLocal, -45.0f);
+	towerLocal = translate(towerLocal, vec3(-20.0f, 0.0f, -20.0f));
 	
 	mat4 towerGlobal = model * towerLocal;
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, towerGlobal.m);
@@ -489,7 +593,7 @@ void display() {
 	glBindVertexArray(g_vao[1]);
 	glDrawArrays(GL_TRIANGLES, 0, g_point_count[1]);
 
-	// *************WINDMILL FAN*************************
+	// ********** Windmill fan **********
 	mat4 windmillLocal = identity_mat4();
 	windmillLocal = rotate_x_deg(windmillLocal, rotate_y);
 	windmillLocal = translate(windmillLocal, vec3(2.0, 7.0, 0.0));
@@ -500,25 +604,16 @@ void display() {
 	glBindVertexArray(g_vao[2]);
 	glDrawArrays(GL_TRIANGLES, 0, g_point_count[2]);
 
-	// *************ENEMY***************************
-	//mat4 enemyLocal = identity_mat4();
-	//enemyLocal = scale(enemyLocal, vec3(0.5, 0.5, 0.5));
-	//enemyLocal = translate(enemyLocal, enemyPos);
-	////enemyLocal = translate(enemyLocal, vec3(12.0, 0.0, -3.0));
-	//
-	//
-	//mat4 enemyGlobal = model * enemyLocal;
-	//glUniformMatrix4fv(matrix_location, 1, GL_FALSE, enemyGlobal.m);
-
-	//glBindVertexArray(g_vao[3]);
-	//glDrawArrays(GL_TRIANGLES, 0, g_point_count[3]);
+	// ********** Enemies **********
 	for (int i = 0; i < enemies.size(); i++) {
 		if (enemies[i].enemy_state == ALIVE_STATE) {
 			mat4 enemyLocal = identity_mat4();
-			enemyLocal = scale(enemyLocal, vec3(0.5, 0.5, 0.5));
-			enemyLocal = translate(enemyLocal, enemies[i].enemy_position);
-			//enemyLocal = translate(enemyLocal, vec3(12.0, 0.0, -3.0));
+			float enemy_rot = direction_to_heading(enemies[i].enemy_front * -1.0f);
+			enemyLocal = rotate_y_deg(enemyLocal, -90.0f);
+			enemyLocal = rotate_y_deg(enemyLocal, enemy_rot);
 
+			//enemyLocal = scale(enemyLocal, vec3(0.5, 0.5, 0.5));
+			enemyLocal = translate(enemyLocal, enemies[i].enemy_position);
 
 			mat4 enemyGlobal = model * enemyLocal;
 			glUniformMatrix4fv(matrix_location, 1, GL_FALSE, enemyGlobal.m);
@@ -528,22 +623,27 @@ void display() {
 		}
 	}
 
-	if (fired) {
-		for (int i = 0; i < bullets.size(); i++) {
+	// ********** Bullets **********
+	for (int i = 0; i < bullets.size(); i++) {
+		if (bullets[i].is_active) {
 			mat4 bulletLocal = identity_mat4();
-			bulletLocal = scale(bulletLocal, vec3(0.02, 0.02, 0.02));
+			// Rotate bullets to always face away from player
+			float bullet_rot = direction_to_heading(cameraFront * -1.0f);
+			bulletLocal = rotate_y_deg(bulletLocal, -90.0f);
+			bulletLocal = rotate_y_deg(bulletLocal, bullet_rot);
+			bulletLocal = scale(bulletLocal, vec3(0.5, 0.5, 0.5));
+			//bulletLocal = rotate_y_deg(bulletLocal, 90.0f);
 			bulletLocal = translate(bulletLocal, bullets[i].bullet_position);
-			//bulletLocal = scale(bulletLocal, vec3(0.25, 0.25, 0.25));
 
 			mat4 bulletGlobal = bulletLocal;
 			glUniformMatrix4fv(matrix_location, 1, GL_FALSE, bulletGlobal.m);
 
-			glBindVertexArray(g_vao[3]);
-			glDrawArrays(GL_TRIANGLES, 0, g_point_count[3]);
+			glBindVertexArray(g_vao[5]);
+			glDrawArrays(GL_TRIANGLES, 0, g_point_count[5]);
 		}
 	}
 	
-	// ***********GUN*******************
+	// ********** Gun **********
 	glBindTexture(GL_TEXTURE_2D, texture1);
 	mat4 gunView = identity_mat4();
 	mat4 gunPersp_proj = perspective(45.0, (float)width / (float)height, 0.1, 100.0);
@@ -554,7 +654,6 @@ void display() {
 	// Gun on RHS
 	gunModel = translate(gunModel, vec3(0.05, -0.05, -0.15));
 	
-
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, gunPersp_proj.m);
 	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, gunView.m);
 	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, gunModel.m);
@@ -578,33 +677,27 @@ void updateScene() {
 	// Wait until at least 16ms passed since start of last frame (Effectively caps framerate at ~60fps)
 	static DWORD  last_time = 0;
 	DWORD  curr_time = timeGetTime();
+	
 	float  delta = (curr_time - last_time) * 0.001f;
 	if (delta > 0.03f)
 		delta = 0.03f;
 	last_time = curr_time;
 
-	if (fired) {
-		bulletInfo();
-		//doCollision(testBullet);
-		//if (bullets.size() > 0)
-			//move_bullets(delta);
-
+	elapsed_time = glutGet(GLUT_ELAPSED_TIME);
+	update_time();
+	if (!game_over) {
+		rotate_y += 10.0f * delta;
+		// Check Enemy, Player collisions
+		do_object_collision();
+		do_bullet_collision();
+		move_enemies(delta);
+		move_bullets(delta);
+		
 	}
-	for (int i = 0; i < enemies.size(); i++) {
-		if (intersect(enemies[i].hitbox, player_hitbox))
-			updateScore(-score);
+	else {
+		game_over_id = add_text("Game Over\n You Died", -0.1, 0.2, 50.0f, 1.0f, 0.0f, 0.0f, 1.0f);
 	}
-	// rotate the model slowly around the y axis
-	rotate_y += 10.0f * delta;
-	enemyPos.v[2] += 2.0f * delta;
-	move_enemies(delta);
-	move_bullets(delta);
-	doCollision();
-	hitbox_info();
-
-	//enemyPos.v[0] += 0.01f;
-	//vec3 distance_moved = (testBullet.bullet_front * (delta * 50.0f));
-	//testBullet.bullet_position += distance_moved;// testBullet.bullet_front;
+	//hitbox_info();
 
 	// Draw the next frame
 	glutPostRedisplay();
@@ -613,10 +706,11 @@ void updateScene() {
 
 void init()
 {
-	SoundEngine->play2D("../Audio/breakout.mp3", GL_TRUE);
+	if (sound_enabled)
+		SoundEngine->play2D("../Audio/breakout.mp3", GL_TRUE);
 
-	warped = false;
 	fired = false;
+	elapsed_time = 0;
 
 	player_hitbox.min = vec3 (cameraPos.v[0] - 0.5f, 0, cameraPos.v[2] - 0.5f);
 	player_hitbox.max = vec3(cameraPos.v[0] + 0.5f, cameraPos.v[1] + 0.5f, cameraPos.v[2] + 0.5f);
@@ -630,11 +724,12 @@ void init()
 	// r,g,b,a are red,blue,green,opacity values between 0.0 and 1.0
 	// if you want to change the text later you will use the returned integer as a parameter
 	crosshair_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 0.75f);
-	score_id = add_text("Score: 0", -0.95f, 0.9f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-	player_info_id = add_text("Player Position", -0.95f, -0.85f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-	enemy_info_id = add_text("Enemy Position", -0.95f, -0.75f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-	bullet_info_id = add_text("Bullet Position", -0.95f, -0.65f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-	player_hb_id = add_text("Player HB Position", 0.5f, -0.65f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	score_id = add_text("Zombies Killed: 0", -0.95f, -0.85f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	time_id = add_text("Time: 0", -0.95f, -0.75f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	//player_info_id = add_text("Player Position", -0.95f, -0.85f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	//enemy_info_id = add_text("Enemy Position", -0.95f, -0.75f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	//bullet_info_id = add_text("Bullet Position", -0.95f, -0.65f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	//player_hb_id = add_text("Player HB Position", 0.3f, -0.65f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	glGenTextures(1, &texture1);
 	glBindTexture(GL_TEXTURE_2D, texture1); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object
@@ -651,8 +746,8 @@ void init()
 	SOIL_free_image_data(image);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glGenTextures(1, &texture2);
-	glBindTexture(GL_TEXTURE_2D, texture2); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object
+	glGenTextures(1, &tex_atlas);
+	glBindTexture(GL_TEXTURE_2D, tex_atlas); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object
 											// Set our texture parameters
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// Set texture wrapping to GL_REPEAT
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -667,11 +762,11 @@ void init()
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// load mesh into a vertex buffer array
-	generateObjectBufferMesh(0);
-	generateObjectBufferMesh(1);
-	generateObjectBufferMesh(2);
-	generateObjectBufferMesh(3);
-	generateObjectBufferMesh(4);
+	// TODO: Make this a loop
+	for (int i = 0; i < num_meshes; i++) {
+		generateObjectBufferMesh(i);
+	}
+	
 
 	glBindVertexArray(0);
 	glEnable(GL_CULL_FACE);
@@ -687,25 +782,30 @@ void resetCamera() {
 
 // Placeholder code for the keypress
 void keypress(unsigned char key, int x, int y) {
-	printf("Pos: %f, %f, %f | Front: %f, %f, %f\n",
-		testBullet.bullet_position.v[0], testBullet.bullet_position.v[1], testBullet.bullet_position.v[2],
-		testBullet.bullet_front.v[0], testBullet.bullet_front.v[1], testBullet.bullet_front.v[2]);
-
 	
 	GLfloat cameraSpeed = speed;
+	vec3 new_pos;
 	switch (key)
 	{
 	case 'w':
-		cameraPos += cameraFront * cameraSpeed;
+		new_pos = cameraPos + (cameraFront * cameraSpeed);
+		if (still_in_bounds(new_pos))
+			cameraPos += cameraFront * cameraSpeed;
 		break;
 	case 's':
-		cameraPos -= cameraFront * cameraSpeed;
+		new_pos = cameraPos - (cameraFront * cameraSpeed);
+		if (still_in_bounds(new_pos))
+			cameraPos -= cameraFront * cameraSpeed;
 		break;
 	case 'a':
-		cameraPos -= normalise(cross(cameraFront, cameraUp)) * cameraSpeed;
+		new_pos = cameraPos - (normalise(cross(cameraFront, cameraUp)) * cameraSpeed);
+		if (still_in_bounds(new_pos))
+			cameraPos -= normalise(cross(cameraFront, cameraUp)) * cameraSpeed;
 		break;
 	case 'd':
-		cameraPos += normalise(cross(cameraFront, cameraUp)) * cameraSpeed;
+		new_pos = cameraPos + (normalise(cross(cameraFront, cameraUp)) * cameraSpeed);
+		if (still_in_bounds(new_pos))
+			cameraPos += normalise(cross(cameraFront, cameraUp)) * cameraSpeed;
 		break;
 	case 'e':
 		spawn_enemy();
@@ -715,23 +815,22 @@ void keypress(unsigned char key, int x, int y) {
 		break;
 	case ' ':
 		resetCamera();
-		//updateScore(10);
 		break;
 	case 27:
 		exit(0);
 		break;
 	case 'u':
-		translateTest.v[0] -= 1.0f;
+		plane_translation.v[0] -= 1.0f;
 		break;
 	case 'i':
-		translateTest.v[0] += 1.0f;
+		plane_translation.v[0] += 1.0f;
 		break;
 
 	}
 	// Keeps user at ground level
 	if (!freecam_enabled)
 		cameraPos.v[1] = 1.5f;
-	positionInfo();
+	//positionInfo();
 	player_hitbox.min = vec3(cameraPos.v[0] - 0.5f, 0, cameraPos.v[2] - 0.5f);
 	player_hitbox.max = vec3(cameraPos.v[0] + 0.5f, cameraPos.v[1] + 0.5f, cameraPos.v[2] + 0.5f);
 
@@ -780,19 +879,11 @@ void mouse(int x, int y) {
 
 void mouseClick(int button, int state, int x, int y) {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-		updateScore(10);
-		vec3 _cameraPos = cameraPos;
-		//_cameraPos.v[0] += 0.4;
-		//_cameraPos.v[1] -= 0.4;
-		
 		spawn_bullet(); // Will replace the below code
-
-		testBullet.bullet_position = _cameraPos + cameraFront;
-		//testBullet.bullet_position.v[1] -= 0.4;
-		//testBullet.bullet_position.v[0] += 0.4;
-		testBullet.bullet_front = cameraFront;
+		if (sound_enabled)
+			SoundEngine->play2D("../Audio/pew.wav", GL_FALSE);
 		fired = true;
-		positionInfo();
+		//positionInfo();
 	}
 }
 #pragma endregion MOVEMENT_CALLBACKS
@@ -829,6 +920,7 @@ int main(int argc, char** argv) {
 
 	// Begin infinite event loop
 	glutMainLoop();
+	SoundEngine->drop();
 	return 0;
 }
 
