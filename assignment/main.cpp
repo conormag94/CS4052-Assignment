@@ -35,6 +35,7 @@ MESH TO LOAD
 #define MIN_Z -27.5f
 #define MAX_Z 27.5f
 #define NUM_SPAWNS 10
+#define TIME_UNTIL_MORNING 60
 
 
 /*----------------------------------------------------------------------------
@@ -72,9 +73,10 @@ GLuint loc1, loc2, loc3;
 
 bool fired;
 bool freecam_enabled = false;
-bool sound_enabled = true;
+bool sound_enabled = false;
 bool game_over = false;
 bool time_started = false;
+bool is_player_alive = true;
 
 long elapsed_time;
 long start_time;
@@ -118,6 +120,7 @@ vec3 cameraUp = vec3(0.0f, 1.0f, 0.0f);
 GLfloat sky_red = 0.2f;
 GLfloat sky_green = 0.2f;
 GLfloat sky_blue = 0.2f;
+GLfloat fog_density = 0.1f;
 
 vec3 plane_translation = vec3(0.0, 0.0, 0.0);
 
@@ -125,7 +128,6 @@ GLfloat yaw = -90.0f;
 GLfloat pitch = 0.0f;
 GLfloat lastX = width / 2.0;
 GLfloat lastY = height / 2.0;
-
 
 class BoundingBox
 {
@@ -158,6 +160,8 @@ Bullet testBullet;
 //Bullet bullets[5];
 std::vector<Bullet> bullets;
 std::vector<Enemy> enemies;
+
+std::vector<BoundingBox> collidables;
 
 BoundingBox player_hitbox;
 
@@ -390,7 +394,7 @@ void move_bullets(float delta) {
 vec3 get_spawn_point() {
 	std::random_device rd;     // only used once to initialise (seed) engine
 	std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
-	std::uniform_int_distribution<int> uni(0, NUM_SPAWNS); // guaranteed unbiased
+	std::uniform_int_distribution<int> uni(0, NUM_SPAWNS - 1); // guaranteed unbiased
 
 	auto random_integer = uni(rng);
 
@@ -436,9 +440,9 @@ void updateScore(int score_increase) {
 }
 
 void update_time() {
-	int time = elapsed_time / 1000;
+	int time = TIME_UNTIL_MORNING - (elapsed_time / 1000);
 	char t[50];
-	sprintf(t, "Time: %d\n", time);
+	sprintf(t, "Time until morning: %d\n", time);
 	update_text(time_id, t);
 }
 
@@ -487,6 +491,13 @@ bool collided_with(Bullet b, Enemy e) {
 
 }
 
+void add_collidable(vec3 min, vec3 max) {
+	BoundingBox temp;
+	temp.min = min;
+	temp.max = max;
+	collidables.push_back(temp);
+}
+
 void do_bullet_collision() {
 	for (int i = 0; i < bullets.size(); i++) {
 		Bullet b = bullets[i];
@@ -503,9 +514,21 @@ void do_bullet_collision() {
 	}
 }
 
+bool player_can_move() {
+	bool res = true;
+	for (size_t i = 0; i < collidables.size(); i++) {
+		if (intersect(collidables[i], player_hitbox) == true) {
+			printf("Collision\n");
+			res = false;
+		}
+	}
+	return res;
+}
+
 void do_object_collision() {
 	for (int i = 0; i < enemies.size(); i++) {
 		if (enemies[i].enemy_state == ALIVE_STATE && intersect(enemies[i].hitbox, player_hitbox)) {
+			is_player_alive = false;
 			game_over = true;
 		}
 	}
@@ -531,6 +554,16 @@ void display() {
 	//glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 	glUseProgram(shaderProgramID);
 	
+
+	if (game_over) {
+		if (sky_blue < 0.8f)
+			sky_blue += 0.001f;
+		if (sky_green < 0.7f)
+			sky_green += 0.001f;
+		fog_density -= 0.0005f;
+		if (fog_density <= 0.0f)
+			fog_density = 0.0f;
+	}
 	/*if (sky_blue < 0.8f)
 		sky_blue += 0.00001f;
 	else if (sky_green < 0.7f)
@@ -539,6 +572,7 @@ void display() {
 	glUniform1f(glGetUniformLocation(shaderProgramID, "sky_red"), sky_red);
 	glUniform1f(glGetUniformLocation(shaderProgramID, "sky_green"), sky_green);
 	glUniform1f(glGetUniformLocation(shaderProgramID, "sky_blue"), sky_blue);
+	glUniform1f(glGetUniformLocation(shaderProgramID, "fog_density"), fog_density);
 
 	//Declare your uniform variables that will be used in your shader
 	int matrix_location = glGetUniformLocation(shaderProgramID, "model");
@@ -684,7 +718,15 @@ void updateScene() {
 	last_time = curr_time;
 
 	elapsed_time = glutGet(GLUT_ELAPSED_TIME);
-	update_time();
+
+	if (!game_over)
+		update_time();
+
+	if (TIME_UNTIL_MORNING - (elapsed_time / 1000) == 0) {
+		game_over = true;
+	}
+
+
 	if (!game_over) {
 		rotate_y += 10.0f * delta;
 		// Check Enemy, Player collisions
@@ -695,7 +737,10 @@ void updateScene() {
 		
 	}
 	else {
-		game_over_id = add_text("Game Over\n You Died", -0.1, 0.2, 50.0f, 1.0f, 0.0f, 0.0f, 1.0f);
+		if (is_player_alive)
+			game_over_id = add_text("You survived the night", -0.3, 0.2, 50.0f, 0.0f, 1.0f, 0.0f, 1.0f);
+		else 
+			game_over_id = add_text("Game Over\n You Died", -0.1, 0.2, 50.0f, 1.0f, 0.0f, 0.0f, 1.0f);
 	}
 	//hitbox_info();
 
@@ -725,8 +770,8 @@ void init()
 	// if you want to change the text later you will use the returned integer as a parameter
 	crosshair_id = add_text("+", -0.01f, 0.05f, 35.0f, 1.0f, 1.0f, 1.0f, 0.75f);
 	score_id = add_text("Zombies Killed: 0", -0.95f, -0.85f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-	time_id = add_text("Time: 0", -0.95f, -0.75f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-	//player_info_id = add_text("Player Position", -0.95f, -0.85f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	time_id = add_text("Time until Morning: 45", -0.95f, -0.75f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	player_info_id = add_text("Player Position", -0.95f, 0.85f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	//enemy_info_id = add_text("Enemy Position", -0.95f, -0.75f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	//bullet_info_id = add_text("Bullet Position", -0.95f, -0.65f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	//player_hb_id = add_text("Player HB Position", 0.3f, -0.65f, 35.0f, 1.0f, 1.0f, 1.0f, 1.0f);
@@ -766,7 +811,8 @@ void init()
 	for (int i = 0; i < num_meshes; i++) {
 		generateObjectBufferMesh(i);
 	}
-	
+
+	add_collidable(vec3(4.0, 2, 17.0), vec3(-4.0, 0, 23.0));
 
 	glBindVertexArray(0);
 	glEnable(GL_CULL_FACE);
@@ -788,24 +834,32 @@ void keypress(unsigned char key, int x, int y) {
 	switch (key)
 	{
 	case 'w':
-		new_pos = cameraPos + (cameraFront * cameraSpeed);
-		if (still_in_bounds(new_pos))
-			cameraPos += cameraFront * cameraSpeed;
+		if (player_can_move()) {
+			new_pos = cameraPos + (cameraFront * cameraSpeed);
+			if (still_in_bounds(new_pos))
+				cameraPos += cameraFront * cameraSpeed;
+		}
 		break;
 	case 's':
-		new_pos = cameraPos - (cameraFront * cameraSpeed);
-		if (still_in_bounds(new_pos))
-			cameraPos -= cameraFront * cameraSpeed;
+		if (player_can_move()) {
+			new_pos = cameraPos - (cameraFront * cameraSpeed);
+			if (still_in_bounds(new_pos))
+				cameraPos -= cameraFront * cameraSpeed;
+		}
 		break;
 	case 'a':
-		new_pos = cameraPos - (normalise(cross(cameraFront, cameraUp)) * cameraSpeed);
-		if (still_in_bounds(new_pos))
-			cameraPos -= normalise(cross(cameraFront, cameraUp)) * cameraSpeed;
+		if (player_can_move()) {
+			new_pos = cameraPos - (normalise(cross(cameraFront, cameraUp)) * cameraSpeed);
+			if (still_in_bounds(new_pos))
+				cameraPos -= normalise(cross(cameraFront, cameraUp)) * cameraSpeed;
+		}
 		break;
 	case 'd':
-		new_pos = cameraPos + (normalise(cross(cameraFront, cameraUp)) * cameraSpeed);
-		if (still_in_bounds(new_pos))
-			cameraPos += normalise(cross(cameraFront, cameraUp)) * cameraSpeed;
+		if (player_can_move()) {
+			new_pos = cameraPos + (normalise(cross(cameraFront, cameraUp)) * cameraSpeed);
+			if (still_in_bounds(new_pos))
+				cameraPos += normalise(cross(cameraFront, cameraUp)) * cameraSpeed;
+		}
 		break;
 	case 'e':
 		spawn_enemy();
@@ -830,7 +884,7 @@ void keypress(unsigned char key, int x, int y) {
 	// Keeps user at ground level
 	if (!freecam_enabled)
 		cameraPos.v[1] = 1.5f;
-	//positionInfo();
+	positionInfo();
 	player_hitbox.min = vec3(cameraPos.v[0] - 0.5f, 0, cameraPos.v[2] - 0.5f);
 	player_hitbox.max = vec3(cameraPos.v[0] + 0.5f, cameraPos.v[1] + 0.5f, cameraPos.v[2] + 0.5f);
 
@@ -902,6 +956,7 @@ int main(int argc, char** argv) {
 	glutIdleFunc(updateScene);
 	glutKeyboardFunc(keypress);
 	glutPassiveMotionFunc(mouse);
+	glutMotionFunc(mouse);
 	glutMouseFunc(mouseClick);
 	glutSetCursor(GLUT_CURSOR_NONE);
 	glutWarpPointer(width / 2, height / 2);
