@@ -35,7 +35,8 @@ MESH TO LOAD
 #define MIN_Z -27.5f
 #define MAX_Z 27.5f
 #define NUM_SPAWNS 10
-#define TIME_UNTIL_MORNING 60
+#define NUM_COLLIDABLES 2
+#define TIME_UNTIL_MORNING 30
 
 
 /*----------------------------------------------------------------------------
@@ -54,9 +55,9 @@ char* mesh_names[num_meshes] = {
 
 vec3 spawn_points[NUM_SPAWNS] = {
 	vec3(0.0f, 0.0f, 0.0f),
-	vec3(2.0f, 0.0f, 0.0f),
+	vec3(2.0f, 0.0f, -2.0f),
 	vec3(4.0f, 0.0f, 0.0f),
-	vec3(6.0f, 0.0f, 0.0f),
+	vec3(6.0f, 0.0f, -10.0f),
 	vec3(8.0f, 0.0f, 0.0f),
 	vec3(-8.0f, 0.0f, 0.0f),
 	vec3(-6.0f, 0.0f, 0.0f),
@@ -73,13 +74,16 @@ GLuint loc1, loc2, loc3;
 
 bool fired;
 bool freecam_enabled = false;
-bool sound_enabled = false;
+bool sound_enabled = true;
 bool game_over = false;
 bool time_started = false;
 bool is_player_alive = true;
 
 long elapsed_time;
 long start_time;
+
+DWORD last_spawn;
+DWORD spawn_rate = 1500;
 
 int enemies_spawned = 0;
 
@@ -103,7 +107,7 @@ GLuint height =1080;
 
 GLfloat rotate_y = 0.0f;
 
-GLfloat speed = 0.15;
+GLfloat speed = 0.2;
 int score = 0;
 
 const int ALIVE_STATE = 1;
@@ -120,7 +124,7 @@ vec3 cameraUp = vec3(0.0f, 1.0f, 0.0f);
 GLfloat sky_red = 0.2f;
 GLfloat sky_green = 0.2f;
 GLfloat sky_blue = 0.2f;
-GLfloat fog_density = 0.1f;
+GLfloat fog_density = 0.5f;
 
 vec3 plane_translation = vec3(0.0, 0.0, 0.0);
 
@@ -161,7 +165,7 @@ Bullet testBullet;
 std::vector<Bullet> bullets;
 std::vector<Enemy> enemies;
 
-std::vector<BoundingBox> collidables;
+BoundingBox collidables[NUM_COLLIDABLES];
 
 BoundingBox player_hitbox;
 
@@ -466,13 +470,34 @@ void hitbox_info() {
 }
 
 // Check if two objects are colliding
-bool intersect(BoundingBox a, BoundingBox b) {
-	return (
+bool _intersect(BoundingBox a, BoundingBox b) {
+	/*return (
 		(a.min.v[0] <= b.max.v[0] && a.max.v[0] >= b.min.v[0]) &&	
 		(a.min.v[1] <= b.max.v[1] && a.max.v[1] >= b.min.v[1]) &&
 		(a.min.v[2] <= b.max.v[2] && a.max.v[2] >= b.min.v[2])
-	);
-	
+	);*/
+	bool res = (
+		a.max.v[0] > b.min.v[0] &&
+		a.min.v[0] < b.max.v[0] &&
+		a.max.v[1] > b.min.v[1] &&
+		a.min.v[1] < b.max.v[1] &&
+		a.max.v[2] > b.min.v[2] &&
+		a.min.v[2] < b.max.v[2]
+		);
+	return res;
+}
+
+bool p_int(vec3 pos, BoundingBox o) {
+	vec3 min = o.min;
+	vec3 max = o.max;
+	return (
+		pos.v[0] >= min.v[0] &&
+		pos.v[0] <= max.v[0] &&
+		pos.v[1] >= min.v[1] &&
+		pos.v[1] <= max.v[1] &&
+		pos.v[2] >= min.v[2] &&
+		pos.v[2] <= max.v[2]
+		);
 }
 
 // Check if a bullet has colliding with an enemy
@@ -491,11 +516,11 @@ bool collided_with(Bullet b, Enemy e) {
 
 }
 
-void add_collidable(vec3 min, vec3 max) {
+void add_collidable(int index, vec3 min, vec3 max) {
 	BoundingBox temp;
 	temp.min = min;
 	temp.max = max;
-	collidables.push_back(temp);
+	collidables[index] = temp;
 }
 
 void do_bullet_collision() {
@@ -514,20 +539,22 @@ void do_bullet_collision() {
 	}
 }
 
-bool player_can_move() {
-	bool res = true;
-	for (size_t i = 0; i < collidables.size(); i++) {
-		if (intersect(collidables[i], player_hitbox) == true) {
-			printf("Collision\n");
-			res = false;
-		}
-	}
-	return res;
-}
+//bool player_can_move() {
+//	bool res = true;
+//	for (size_t i = 0; i < collidables.size(); i++) {
+//		printf("%d/%d: ", i, collidables.size());
+//		printf("min %f, %f", collidables[i].min.v[0], collidables[i].max.v[2]);
+//		if (_intersect(player_hitbox, collidables[i])) {
+//			printf("Collision\n");
+//			res = false;
+//		}
+//	}
+//	return res;
+//}
 
 void do_object_collision() {
 	for (int i = 0; i < enemies.size(); i++) {
-		if (enemies[i].enemy_state == ALIVE_STATE && intersect(enemies[i].hitbox, player_hitbox)) {
+		if (enemies[i].enemy_state == ALIVE_STATE && _intersect(enemies[i].hitbox, player_hitbox)) {
 			is_player_alive = false;
 			game_over = true;
 		}
@@ -555,12 +582,12 @@ void display() {
 	glUseProgram(shaderProgramID);
 	
 
-	if (game_over) {
+	if (game_over && is_player_alive) {
 		if (sky_blue < 0.8f)
 			sky_blue += 0.001f;
 		if (sky_green < 0.7f)
 			sky_green += 0.001f;
-		fog_density -= 0.0005f;
+		fog_density -= 0.001f;
 		if (fog_density <= 0.0f)
 			fog_density = 0.0f;
 	}
@@ -653,7 +680,8 @@ void display() {
 			glUniformMatrix4fv(matrix_location, 1, GL_FALSE, enemyGlobal.m);
 
 			glBindVertexArray(g_vao[3]);
-			glDrawArrays(GL_TRIANGLES, 0, g_point_count[3]);
+			if (!game_over || (game_over && !is_player_alive))
+				glDrawArrays(GL_TRIANGLES, 0, g_point_count[3]);
 		}
 	}
 
@@ -673,7 +701,8 @@ void display() {
 			glUniformMatrix4fv(matrix_location, 1, GL_FALSE, bulletGlobal.m);
 
 			glBindVertexArray(g_vao[5]);
-			glDrawArrays(GL_TRIANGLES, 0, g_point_count[5]);
+			if (!game_over)
+				glDrawArrays(GL_TRIANGLES, 0, g_point_count[5]);
 		}
 	}
 	
@@ -726,10 +755,14 @@ void updateScene() {
 		game_over = true;
 	}
 
-
+	
 	if (!game_over) {
 		rotate_y += 10.0f * delta;
 		// Check Enemy, Player collisions
+		if (curr_time - last_spawn > spawn_rate) {
+			spawn_enemy();
+			last_spawn = curr_time;
+		}
 		do_object_collision();
 		do_bullet_collision();
 		move_enemies(delta);
@@ -740,7 +773,7 @@ void updateScene() {
 		if (is_player_alive)
 			game_over_id = add_text("You survived the night", -0.3, 0.2, 50.0f, 0.0f, 1.0f, 0.0f, 1.0f);
 		else 
-			game_over_id = add_text("Game Over\n You Died", -0.1, 0.2, 50.0f, 1.0f, 0.0f, 0.0f, 1.0f);
+			game_over_id = add_text("DEFEAT", -0.1, 0.2, 70.0f, 1.0f, 0.0f, 0.0f, 1.0f);
 	}
 	//hitbox_info();
 
@@ -756,9 +789,14 @@ void init()
 
 	fired = false;
 	elapsed_time = 0;
+	
+	/*BoundingBox temp;
+	temp.min = vec3(-4.0, 0, 17.0);
+	temp.max = vec3(4.0, 4, 23.0);
+	collidables[0] = temp;*/
 
 	player_hitbox.min = vec3 (cameraPos.v[0] - 0.5f, 0, cameraPos.v[2] - 0.5f);
-	player_hitbox.max = vec3(cameraPos.v[0] + 0.5f, cameraPos.v[1] + 0.5f, cameraPos.v[2] + 0.5f);
+	player_hitbox.max = vec3(cameraPos.v[0] + 0.5f, 1.5f, cameraPos.v[2] + 0.5f);
 
 	// Set up the shaders
 	GLuint shaderProgramID = CompileShaders();
@@ -807,12 +845,12 @@ void init()
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// load mesh into a vertex buffer array
-	// TODO: Make this a loop
 	for (int i = 0; i < num_meshes; i++) {
 		generateObjectBufferMesh(i);
 	}
 
-	add_collidable(vec3(4.0, 2, 17.0), vec3(-4.0, 0, 23.0));
+	add_collidable(0, vec3(-4.0, 0, 17.0), vec3(4.0, 4, 23.0));
+	add_collidable(1, vec3(-3, 0, 3), vec3(3, 4, -3.0));
 
 	glBindVertexArray(0);
 	glEnable(GL_CULL_FACE);
@@ -830,36 +868,20 @@ void resetCamera() {
 void keypress(unsigned char key, int x, int y) {
 	
 	GLfloat cameraSpeed = speed;
-	vec3 new_pos;
+	vec3 new_pos = cameraPos;
 	switch (key)
 	{
 	case 'w':
-		if (player_can_move()) {
-			new_pos = cameraPos + (cameraFront * cameraSpeed);
-			if (still_in_bounds(new_pos))
-				cameraPos += cameraFront * cameraSpeed;
-		}
+		new_pos = cameraPos + (cameraFront * cameraSpeed);
 		break;
 	case 's':
-		if (player_can_move()) {
-			new_pos = cameraPos - (cameraFront * cameraSpeed);
-			if (still_in_bounds(new_pos))
-				cameraPos -= cameraFront * cameraSpeed;
-		}
+		new_pos = cameraPos - (cameraFront * cameraSpeed);
 		break;
 	case 'a':
-		if (player_can_move()) {
-			new_pos = cameraPos - (normalise(cross(cameraFront, cameraUp)) * cameraSpeed);
-			if (still_in_bounds(new_pos))
-				cameraPos -= normalise(cross(cameraFront, cameraUp)) * cameraSpeed;
-		}
+		new_pos = cameraPos - (normalise(cross(cameraFront, cameraUp)) * cameraSpeed);
 		break;
 	case 'd':
-		if (player_can_move()) {
-			new_pos = cameraPos + (normalise(cross(cameraFront, cameraUp)) * cameraSpeed);
-			if (still_in_bounds(new_pos))
-				cameraPos += normalise(cross(cameraFront, cameraUp)) * cameraSpeed;
-		}
+		new_pos = cameraPos + (normalise(cross(cameraFront, cameraUp)) * cameraSpeed);
 		break;
 	case 'e':
 		spawn_enemy();
@@ -879,15 +901,44 @@ void keypress(unsigned char key, int x, int y) {
 	case 'i':
 		plane_translation.v[0] += 1.0f;
 		break;
+	case 'm':
+		sound_enabled = false;
+		break;
 
 	}
 	// Keeps user at ground level
+	
+
+	BoundingBox new_hitbox;
+	new_hitbox.min = vec3(new_pos.v[0] - 0.5f, 0, new_pos.v[2] - 0.5f);
+	new_hitbox.max = vec3(new_pos.v[0] + 0.5f, 1.5f, new_pos.v[2] + 0.5f);
+
+	bool can_move = true;// = player_can_move();
+	BoundingBox temp;
+	temp.min = vec3(-4.25, 0, 16.5);
+	temp.max = vec3(4.1, 4, 23.1);
+	for (int i = 0; i < NUM_COLLIDABLES; i++) {
+		BoundingBox t = collidables[i];
+		if (_intersect(new_hitbox, t))
+			can_move = false;
+	}
+	if (!still_in_bounds(new_pos))
+		can_move = false;
+	/*if (_intersect(new_hitbox, collidables[1]))
+		can_move = false;*/
+	char *result = can_move ? "" : "******COLLISION******\n";
+	printf("%s", result);
+	if (can_move && !game_over) {
+		cameraPos = new_pos;
+		player_hitbox.min = vec3(cameraPos.v[0] - 0.5f, 0, cameraPos.v[2] - 0.5f);
+		player_hitbox.max = vec3(cameraPos.v[0] + 0.5f, 1.5f, cameraPos.v[2] + 0.5f);
+	}
+	else {
+		printf("Collision");
+	}
 	if (!freecam_enabled)
 		cameraPos.v[1] = 1.5f;
 	positionInfo();
-	player_hitbox.min = vec3(cameraPos.v[0] - 0.5f, 0, cameraPos.v[2] - 0.5f);
-	player_hitbox.max = vec3(cameraPos.v[0] + 0.5f, cameraPos.v[1] + 0.5f, cameraPos.v[2] + 0.5f);
-
 }
 
 
@@ -927,7 +978,8 @@ void mouse(int x, int y) {
 	GLfloat front_z = sin(yaw * to_radians) * cos(pitch * to_radians);
 
 	vec3 newFront = normalise(vec3(front_x, front_y, front_z));
-	cameraFront = newFront;
+	if (!game_over)
+		cameraFront = newFront;
 
 }
 
@@ -949,8 +1001,8 @@ int main(int argc, char** argv) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
 	glutInitWindowSize(width, height);
-	glutCreateWindow("Hello Triangle");
-
+	glutCreateWindow("Hello Zombies");
+	
 	// Tell glut where the display function is
 	glutDisplayFunc(display);
 	glutIdleFunc(updateScene);
@@ -959,6 +1011,7 @@ int main(int argc, char** argv) {
 	glutMotionFunc(mouse);
 	glutMouseFunc(mouseClick);
 	glutSetCursor(GLUT_CURSOR_NONE);
+	glutFullScreen();
 	glutWarpPointer(width / 2, height / 2);
 
 
